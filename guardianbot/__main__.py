@@ -27,6 +27,8 @@ async def on_ready():
         f'{guild.name} (id: {guild.id})'
     )
 
+    print(f'Latency: {int(bot.latency * 1000)}ms')
+
 
 @bot.check
 async def global_command_filter(ctx: commands.Context) -> bool:
