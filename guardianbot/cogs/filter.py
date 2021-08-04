@@ -131,6 +131,8 @@ class FilterCog(BaseCog[State]):
 
         logger.info(f'successfully blocked message {message.id}')
 
+    # filter list stuff
+
     @commands.group()
     async def filter(self, ctx: commands.Context) -> None:
         pass
@@ -159,12 +161,14 @@ class FilterCog(BaseCog[State]):
         s += '```\n' + '\n'.join(self.blocklist) + '\n```'
         await ctx.send(s)
 
-    @commands.group()
-    async def filterconfig(self, ctx: commands.Context) -> None:
+    # config stuff
+
+    @filter.group(name='config')
+    async def filter_config(self, ctx: commands.Context) -> None:
         pass
 
-    @filterconfig.command(name='report_channel')
-    async def filterconfig_report_channel(self, ctx: commands.Context, channel: Optional[discord.TextChannel]) -> None:
+    @filter_config.command(name='report_channel')
+    async def filter_config_report_channel(self, ctx: commands.Context, channel: Optional[discord.TextChannel]) -> None:
         if channel:
             self.state.report_channel = channel.id
             self._write_state()
@@ -172,8 +176,8 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
 
-    @filterconfig.command(name='muted_role')
-    async def filterconfig_muted_role(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
+    @filter_config.command(name='muted_role')
+    async def filter_config_muted_role(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
         if role:
             self.state.muted_role = role.id
             self._write_state()
@@ -181,8 +185,8 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nmuted_role = {self.state.muted_role}\n```')
 
-    @filterconfig.command(name='mute_minutes')
-    async def filterconfig_mute_minutes(self, ctx: commands.Context, minutes: Optional[int]) -> None:
+    @filter_config.command(name='mute_minutes')
+    async def filter_config_mute_minutes(self, ctx: commands.Context, minutes: Optional[int]) -> None:
         if minutes:
             self.state.mute_minutes = minutes
             self._write_state()
@@ -190,8 +194,8 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
-    @filterconfig.command(name='unfiltered_roles')
-    async def filterconfig_unfiltered_roles(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
+    @filter_config.command(name='unfiltered_roles')
+    async def filter_config_unfiltered_roles(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
         if role:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
