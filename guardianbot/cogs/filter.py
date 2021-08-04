@@ -1,6 +1,7 @@
 import logging
 import discord
-from typing import Dict, Optional, Set
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Set, cast
 from dataclasses import dataclass, field
 from discord.ext import commands
 
@@ -16,9 +17,11 @@ logger = logging.getLogger(__name__)
 class State:
     report_channel: Optional[int] = None
     muted_role: Optional[int] = None
+    mute_minutes: int = 10
     unfiltered_users: Set[int] = field(default_factory=set)
 
-    muted_users: Dict[int, int] = field(default_factory=dict)
+    # using str instead of int since json only supports string keys
+    _muted_users: Dict[str, datetime] = field(default_factory=dict)
 
 
 class FilterCog(BaseCog[State]):
@@ -51,8 +54,35 @@ class FilterCog(BaseCog[State]):
         return True
 
     async def _handle_blocked(self, message: discord.Message) -> None:
-        logger.info(f'blocked message {message.id}')
-        # TODO
+        logger.info(f'blocking message {message.id} (\'{message.content}\')')
+        await message.delete()
+        author = cast(discord.Member, message.author)
+
+        mute = self.state.muted_role is not None
+        if mute:
+            assert self.state.muted_role  # satisfy the linter
+            role = cast(discord.Guild, message.guild).get_role(self.state.muted_role)
+            assert role
+            await author.add_roles(role, reason='blocked word/phrase')
+            self.state._muted_users[str(author.id)] = datetime.utcnow() + timedelta(minutes=self.state.mute_minutes)
+            self._write_state()
+
+        if self.state.report_channel:
+            prefix = 'Muted' if mute else 'Blocked message by'
+            embed = discord.Embed(
+                color=0x992e22,
+                description=f'**{prefix} {author.mention}**'
+            ).set_author(
+                name=f'{prefix} {str(author)} ({author.id})',
+                icon_url=author.avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
+            )
+
+            if mute:
+                embed.add_field(name='Duration', value=f'{self.state.mute_minutes}m')
+
+            await self._bot.get_channel(self.state.report_channel).send(embed=embed)
+
+        logger.info(f'successfully blocked message {message.id}')
 
     @commands.group()
     async def filter(self, ctx: commands.Context) -> None:
@@ -103,6 +133,15 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'Set muted role to {role.id}')
         else:
             await ctx.send(f'```\nmuted_role = {self.state.muted_role}\n```')
+
+    @filterconfig.command(name='mute_minutes')
+    async def filterconfig_mute_minutes(self, ctx: commands.Context, minutes: Optional[int]) -> None:
+        if minutes:
+            self.state.mute_minutes = minutes
+            self._write_state()
+            await ctx.send(f'Set mute duration to {minutes}m')
+        else:
+            await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
     @filterconfig.command(name='unfiltered_users')
     async def filterconfig_unfiltered_users(self, ctx: commands.Context, user: Optional[discord.Member]) -> None:
