@@ -47,7 +47,7 @@ class BaseCog(Generic[_TState], commands.Cog):
             self.state = self.__state_type(**json.loads(self.__state_path.read_text(), object_hook=_custom_decoder))
         else:
             self.state = self.__state_type()
-            self._write_state()
+        self._write_state()
 
     def _write_state(self) -> None:
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
