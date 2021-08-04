@@ -142,3 +142,4 @@ cython_debug/
 venv*/
 
 data/
+docker-compose.yml

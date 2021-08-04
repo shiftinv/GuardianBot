@@ -8,7 +8,10 @@ WORKDIR /app
 
 # install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apk add --no-cache --virtual build-dep git build-base \
+ && pip install --no-cache-dir -r requirements.txt \
+ && apk del build-dep \
+ && find /tmp/ /var/tmp/ -mindepth 1 -maxdepth 1 -exec rm -rf "{}" +
 
 # copy app
 USER app
