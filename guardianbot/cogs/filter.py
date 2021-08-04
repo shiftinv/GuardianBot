@@ -18,7 +18,7 @@ class State:
     report_channel: Optional[int] = None
     muted_role: Optional[int] = None
     mute_minutes: int = 10
-    unfiltered_users: Set[int] = field(default_factory=set)
+    unfiltered_roles: Set[int] = field(default_factory=set)
 
     # using str instead of int since json only supports string keys
     _muted_users: Dict[str, datetime] = field(default_factory=dict)
@@ -83,14 +83,22 @@ class FilterCog(BaseCog[State]):
         if ctx.command:
             return False  # don't check commands
 
-        # TODO: filter by role(s) and/or channel
+        if any(
+            discord.utils.get(cast(discord.Member, message.author).roles, id=role_id)
+            for role_id in self.state.unfiltered_roles
+        ):
+            return False  # don't check unfiltered roles
+
         return True
 
     async def _handle_blocked(self, message: discord.Message) -> None:
         logger.info(f'blocking message {message.id} (\'{message.content}\')')
-        await message.delete()
-        author = cast(discord.Member, message.author)
 
+        # delete message
+        await message.delete()
+
+        # mute user
+        author = cast(discord.Member, message.author)
         mute = self.state.muted_role is not None
         if mute:
             assert self.state.muted_role  # satisfy the linter
@@ -100,6 +108,7 @@ class FilterCog(BaseCog[State]):
             self.state._muted_users[str(author.id)] = datetime.utcnow() + timedelta(minutes=self.state.mute_minutes)
             self._write_state()
 
+        # send notification to channel
         if self.state.report_channel:
             prefix = 'Muted' if mute else 'Blocked message by'
             embed = discord.Embed(
@@ -176,16 +185,20 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
-    @filterconfig.command(name='unfiltered_users')
-    async def filterconfig_unfiltered_users(self, ctx: commands.Context, user: Optional[discord.Member]) -> None:
-        if user:
-            if user.id in self.state.unfiltered_users:
-                self.state.unfiltered_users.remove(user.id)
+    @filterconfig.command(name='unfiltered_roles')
+    async def filterconfig_unfiltered_roles(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
+        if role:
+            if role.id in self.state.unfiltered_roles:
+                self.state.unfiltered_roles.remove(role.id)
                 self._write_state()
-                await ctx.send(f'Removed {user.id}')
+                await ctx.send(f'Removed {role.id}')
             else:
-                self.state.unfiltered_users.add(user.id)
+                self.state.unfiltered_roles.add(role.id)
                 self._write_state()
-                await ctx.send(f'Added {user.id}')
+                await ctx.send(f'Added {role.id}')
         else:
-            await ctx.send(f'```\nunfiltered_users = {self.state.unfiltered_users}\n```')
+            roles = ', '.join(
+                f'{role_id} ({self._guild.get_role(role_id) or "<unknown>"})'
+                for role_id in self.state.unfiltered_roles
+            )
+            await ctx.send(f'```\nunfiltered_roles = {{{roles}}}\n```')

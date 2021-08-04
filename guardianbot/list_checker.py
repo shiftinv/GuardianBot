@@ -42,7 +42,7 @@ class ListChecker:
             return
         with open(self.cache_path, 'r') as f:
             self.__strings.clear()
-            self.__strings.extend(set(json.load(f)))
+            self.__strings.extend(json.load(f))
         logger.debug(f'loaded {len(self)} entries for {self}')
 
     def _write_list(self) -> None:
