@@ -9,7 +9,7 @@ from typing import Any, Optional
 async def handle_error(bot: commands.Bot, exc: Optional[Exception]) -> bool:
     try:
         file = None
-        if isinstance(exc, (commands.errors.CheckFailure, commands.errors.CheckAnyFailure)):
+        if type(exc) in (commands.errors.CheckFailure, commands.errors.CheckAnyFailure) or isinstance(exc, commands.errors.UserInputError):
             # ignore check failures
             return True
         elif exc:
