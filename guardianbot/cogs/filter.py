@@ -1,7 +1,10 @@
 import logging
 import discord
+from typing import Dict, Optional, Set
+from dataclasses import dataclass, field
 from discord.ext import commands
 
+from ._base import BaseCog
 from ..list_checker import ListChecker
 from ..config import Config
 
@@ -9,9 +12,18 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-class FilterCog(commands.Cog):
+@dataclass
+class State:
+    report_channel: Optional[int] = None
+    muted_role: Optional[int] = None
+    unfiltered_users: Set[int] = field(default_factory=set)
+
+    muted_users: Dict[int, int] = field(default_factory=dict)
+
+
+class FilterCog(BaseCog[State]):
     def __init__(self, bot: commands.Bot):
-        self._bot = bot
+        super().__init__(bot)
 
         self.blocklist = ListChecker()
 
@@ -69,3 +81,39 @@ class FilterCog(commands.Cog):
         s = f'List contains {len(self.blocklist)} element(s):\n'
         s += '```\n' + '\n'.join(self.blocklist) + '\n```'
         await ctx.send(s)
+
+    @commands.group()
+    async def filterconfig(self, ctx: commands.Context) -> None:
+        pass
+
+    @filterconfig.command(name='report_channel')
+    async def filterconfig_report_channel(self, ctx: commands.Context, channel: Optional[discord.TextChannel]) -> None:
+        if channel:
+            self.state.report_channel = channel.id
+            self._write_state()
+            await ctx.send(f'Set channel to {channel.id}')
+        else:
+            await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
+
+    @filterconfig.command(name='muted_role')
+    async def filterconfig_muted_role(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
+        if role:
+            self.state.muted_role = role.id
+            self._write_state()
+            await ctx.send(f'Set muted role to {role.id}')
+        else:
+            await ctx.send(f'```\nmuted_role = {self.state.muted_role}\n```')
+
+    @filterconfig.command(name='unfiltered_users')
+    async def filterconfig_unfiltered_users(self, ctx: commands.Context, user: Optional[discord.Member]) -> None:
+        if user:
+            if user.id in self.state.unfiltered_users:
+                self.state.unfiltered_users.remove(user.id)
+                self._write_state()
+                await ctx.send(f'Removed {user.id}')
+            else:
+                self.state.unfiltered_users.add(user.id)
+                self._write_state()
+                await ctx.send(f'Added {user.id}')
+        else:
+            await ctx.send(f'```\nunfiltered_users = {self.state.unfiltered_users}\n```')
