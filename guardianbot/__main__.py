@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from typing import cast
 
-from . import cogs
+from . import cogs, error_handler
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -48,5 +48,8 @@ async def global_command_filter(ctx: commands.Context) -> bool:
     if ctx.guild is not None and cast(discord.Member, ctx.author).guild_permissions.manage_messages:
         return True  # allow users with 'Manage Messages' permission in guild
     return False
+
+
+error_handler.init(bot)
 
 bot.run(Config.token)

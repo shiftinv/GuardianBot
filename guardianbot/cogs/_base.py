@@ -38,7 +38,7 @@ class BaseCog(Generic[_TState], commands.Cog):
     def __init__(self, bot: commands.Bot):
         self._bot = bot
 
-        self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__}.json'
+        self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
         self.__state_type = get_args(type(self).__orig_bases__[0])[0]
         self._read_state()
 

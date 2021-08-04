@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from discord.ext import commands, tasks
 
 from ._base import BaseCog
+from .. import error_handler
 from ..list_checker import ListChecker
 from ..config import Config
 
@@ -62,6 +63,10 @@ class FilterCog(BaseCog[State]):
 
         if changed:
             self._write_state()
+
+    @_unmute_expired.error
+    async def _unmute_expired_error(self, exc: Exception) -> None:
+        await error_handler.handle_error(self._bot, exc)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
