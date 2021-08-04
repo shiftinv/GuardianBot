@@ -127,6 +127,12 @@ class FilterCog(BaseCog[State]):
             if mute:
                 embed.add_field(name='Duration', value=f'{self.state.mute_minutes}m')
 
+            embed.add_field(
+                name='Text',
+                value=f'```\n{message.clean_content}\n```',
+                inline=False
+            )
+
             await self._bot.get_channel(self.state.report_channel).send(embed=embed)
 
         logger.info(f'successfully blocked message {message.id}')
