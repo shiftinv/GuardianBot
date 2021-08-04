@@ -3,7 +3,7 @@ import discord
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Set, cast
 from dataclasses import dataclass, field
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from ._base import BaseCog
 from ..list_checker import ListChecker
@@ -29,6 +29,39 @@ class FilterCog(BaseCog[State]):
         super().__init__(bot)
 
         self.blocklist = ListChecker()
+
+        self._unmute_expired.start()
+
+    def cog_unload(self) -> None:
+        self._unmute_expired.stop()
+
+    @tasks.loop(minutes=1)
+    async def _unmute_expired(self):
+        if not self._guild:  # task may run before socket is initialized
+            return
+        if not self.state.muted_role:
+            return
+
+        logger.debug('checking expired mutes')
+        now = datetime.utcnow()
+        changed = False
+        role = self._guild.get_role(self.state.muted_role)
+        assert role
+
+        for user_id, expiry in self.state._muted_users.copy().items():
+            if expiry < now:
+                logger.info(f'unmuting {user_id}')
+
+                member = self._guild.get_member(int(user_id))
+                if member:
+                    await member.remove_roles(role, reason='mute expired')
+                else:
+                    logger.debug('user left guild')
+                self.state._muted_users.pop(user_id)
+                changed = True
+
+        if changed:
+            self._write_state()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:

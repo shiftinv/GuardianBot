@@ -1,4 +1,5 @@
 import json
+import discord
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict
@@ -31,6 +32,8 @@ _TState = TypeVar('_TState')
 
 class BaseCog(Generic[_TState], commands.Cog):
     state: _TState
+    _bot: commands.Bot
+    _guild: discord.Guild = None  # type: ignore  # late init
 
     def __init__(self, bot: commands.Bot):
         self._bot = bot

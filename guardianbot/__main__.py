@@ -4,6 +4,7 @@ from discord.ext import commands
 from typing import cast
 
 from . import cogs
+from .cogs._base import BaseCog
 from .config import Config
 
 
@@ -11,7 +12,13 @@ logging.basicConfig(format='%(asctime)s: [%(levelname)s] (%(threadName)s) %(name
 logging.getLogger('guardianbot').setLevel(logging.DEBUG if Config.debug else logging.INFO)
 
 
-bot = commands.Bot(Config.prefix)
+intents = discord.Intents.default()
+intents.members = True
+
+bot = commands.Bot(
+    command_prefix=Config.prefix,
+    intents=intents
+)
 
 bot.add_cog(cogs.FilterCog(bot))
 
@@ -28,6 +35,10 @@ async def on_ready():
     )
 
     print(f'Latency: {int(bot.latency * 1000)}ms')
+
+    for cog in bot.cogs.values():
+        if isinstance(cog, BaseCog):
+            cog._guild = guild
 
 
 @bot.check
