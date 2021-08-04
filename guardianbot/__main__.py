@@ -9,7 +9,8 @@ from .config import Config
 
 
 logging.basicConfig(format='%(asctime)s: [%(levelname)s] (%(threadName)s) %(name)s: %(message)s', level=logging.INFO)
-logging.getLogger('guardianbot').setLevel(logging.DEBUG if Config.debug else logging.INFO)
+logger = logging.getLogger('guardianbot')
+logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 
 
 intents = discord.Intents.default()
@@ -29,12 +30,12 @@ async def on_ready():
 
     guild = discord.utils.get(bot.guilds, id=Config.guild_id)
     assert guild, f'couldn\'t find guild with ID {Config.guild_id}'
-    print(
+    logger.info(
         f'{bot.user} is connected to the following guild:\n'
         f'{guild.name} (id: {guild.id})'
     )
 
-    print(f'Latency: {int(bot.latency * 1000)}ms')
+    logger.info(f'Latency: {int(bot.latency * 1000)}ms')
 
     for cog in bot.cogs.values():
         if isinstance(cog, BaseCog):
