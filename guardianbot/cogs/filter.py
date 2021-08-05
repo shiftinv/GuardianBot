@@ -1,7 +1,7 @@
 import logging
 import discord
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Set, cast
+from typing import Dict, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
 from discord.ext import commands, tasks
 
@@ -70,31 +70,32 @@ class FilterCog(BaseCog[State]):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        if not await self._should_check(message):
-            logger.debug(f'not checking message {message.id}')
+        check, reason = await self._should_check(message)
+        if not check:
+            logger.debug(f'ignoring message {message.id}, {reason}')
             return
 
         if self.blocklist.check_match(message.content):
             await self._handle_blocked(message)
 
-    async def _should_check(self, message: discord.Message) -> bool:
+    async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
         if not message.guild:
-            return False  # don't check DMs
+            return False, 'not checking DMs'
         assert message.guild.id == Config.guild_id
         if message.author.bot:
-            return False  # don't check bots
+            return False, 'not checking bots'
 
         ctx = await self._bot.get_context(message)  # type: commands.Context
         if ctx.command:
-            return False  # don't check commands
+            return False, 'not checking commands'
 
         if any(
             discord.utils.get(cast(discord.Member, message.author).roles, id=role_id)
             for role_id in self.state.unfiltered_roles
         ):
-            return False  # don't check unfiltered roles
+            return False, 'not checking user with unfiltered role'
 
-        return True
+        return True, ''
 
     async def _handle_blocked(self, message: discord.Message) -> None:
         logger.info(f'blocking message {message.id} (\'{message.content}\')')
