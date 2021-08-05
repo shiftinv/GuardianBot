@@ -21,6 +21,7 @@ bot = commands.Bot(
     intents=intents
 )
 
+bot.add_cog(cogs.CoreCog(bot))
 bot.add_cog(cogs.FilterCog(bot))
 
 
