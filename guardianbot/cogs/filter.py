@@ -66,7 +66,7 @@ class FilterCog(BaseCog[State]):
 
     @_unmute_expired.error
     async def _unmute_expired_error(self, exc: Exception) -> None:
-        await error_handler.handle_error(self._bot, exc)
+        await error_handler.handle_task_error(self._bot, exc)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
