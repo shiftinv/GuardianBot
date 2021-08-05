@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from discord.ext import commands, tasks
 
 from ._base import BaseCog
-from .. import error_handler
+from .. import error_handler, utils
 from ..list_checker import ListChecker
 from ..config import Config
 
@@ -44,7 +44,7 @@ class FilterCog(BaseCog[State]):
             return
 
         logger.debug('checking expired mutes')
-        now = datetime.utcnow()
+        now = utils.utcnow()
         changed = False
         role = self._guild.get_role(self.state.muted_role)
         assert role
@@ -111,7 +111,7 @@ class FilterCog(BaseCog[State]):
             role = cast(discord.Guild, message.guild).get_role(self.state.muted_role)
             assert role
             await author.add_roles(role, reason='blocked word/phrase')
-            self.state._muted_users[str(author.id)] = datetime.utcnow() + timedelta(minutes=self.state.mute_minutes)
+            self.state._muted_users[str(author.id)] = utils.utcnow() + timedelta(minutes=self.state.mute_minutes)
             self._write_state()
 
         # send notification to channel
@@ -138,11 +138,28 @@ class FilterCog(BaseCog[State]):
 
         logger.info(f'successfully blocked message {message.id}')
 
-    # filter list stuff
-
     @commands.group()
     async def filter(self, ctx: commands.Context) -> None:
         pass
+
+    @filter.command(name='muted')
+    async def filter_muted(self, ctx: commands.Context) -> None:
+        if self.state._muted_users:
+            desc = '`[name]: [expiry]`\n'
+            desc += '\n'.join(
+                f'<@!{id}>: {discord.utils.format_dt(expiry)}'  # type: ignore  # discord.py-stubs isn't updated yet
+                for id, expiry in self.state._muted_users.items()
+            )
+        else:
+            desc = 'none'
+
+        embed = discord.Embed(
+            title='Currently muted users',
+            description=desc
+        )
+        await ctx.send(embed=embed)
+
+    # filter list stuff
 
     @filter.command(name='add')
     async def filter_add(self, ctx: commands.Context, input: str) -> None:

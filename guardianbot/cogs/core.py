@@ -4,6 +4,7 @@ from discord.ext import commands
 from typing import Optional
 
 from ._base import BaseCog
+from .. import utils
 
 
 class CoreCog(BaseCog[None]):
@@ -11,7 +12,7 @@ class CoreCog(BaseCog[None]):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        self._start_time = datetime.utcnow()
+        self._start_time = utils.utcnow()
 
     @commands.command()
     async def ping(self, ctx: commands.Context) -> None:
@@ -20,7 +21,7 @@ class CoreCog(BaseCog[None]):
     @commands.command()
     async def uptime(self, ctx: commands.Context) -> None:
         assert self._start_time
-        diff = datetime.utcnow() - self._start_time
+        diff = utils.utcnow() - self._start_time
         await ctx.send(f'uptime: {humanize.naturaldelta(diff)}')
 
     @commands.command()
