@@ -2,7 +2,7 @@ import json
 import discord
 from pathlib import Path
 from datetime import datetime
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, Generic, TypeVar, get_args
 from discord.ext import commands
 
@@ -39,10 +39,19 @@ class BaseCog(Generic[_TState], commands.Cog):
         self._bot = bot
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
-        self.__state_type = get_args(type(self).__orig_bases__[0])[0]
+        self.__state_type = get_args(type(self).__orig_bases__[0])[0]  # get `_TState` at runtime
+        if self.__state_type is type(None):  # noqa: E721
+            self.__state_type = None
+        else:
+            assert is_dataclass(self.__state_type), f'state type must be a dataclass (got \'{self.__state_type}\')'
+
         self._read_state()
 
     def _read_state(self) -> None:
+        if self.__state_type is None:
+            self.state = None  # type: ignore
+            return
+
         if self.__state_path.exists():
             self.state = self.__state_type(**json.loads(self.__state_path.read_text(), object_hook=_custom_decoder))
         else:
@@ -50,5 +59,8 @@ class BaseCog(Generic[_TState], commands.Cog):
         self._write_state()
 
     def _write_state(self) -> None:
+        if self.__state_type is None:
+            return
+
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
