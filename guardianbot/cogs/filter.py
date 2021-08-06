@@ -72,7 +72,7 @@ class FilterCog(BaseCog[State]):
     async def on_message(self, message: discord.Message) -> None:
         check, reason = await self._should_check(message)
         if not check:
-            logger.debug(f'ignoring message {message.id}, {reason}')
+            logger.debug(f'ignoring message {message.id} by {message.author}, {reason}')
             return
 
         if self.blocklist.check_match(message.content):
@@ -131,6 +131,11 @@ class FilterCog(BaseCog[State]):
             embed.add_field(
                 name='Text',
                 value=f'```\n{message.clean_content}\n```',
+                inline=False
+            )
+            embed.add_field(
+                name='Channel',
+                value=message.channel.mention,
                 inline=False
             )
 
