@@ -18,5 +18,8 @@ USER app
 COPY --chown=app:app . .
 RUN mkdir data
 
+ARG GIT_COMMIT=
+ENV DISCORD_GIT_COMMIT=${GIT_COMMIT}
+
 VOLUME /app/data
 CMD ["python", "-m", "guardianbot"]
