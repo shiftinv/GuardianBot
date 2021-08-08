@@ -110,7 +110,8 @@ class FilterCog(BaseCog[State]):
             prefix = 'Muted' if mute else 'Blocked message by'
             embed = discord.Embed(
                 color=0x992e22,
-                description=f'**{prefix} {author.mention}**'
+                description=author.mention,
+                timestamp=utils.utcnow()
             ).set_author(
                 name=f'{prefix} {str(author)} ({author.id})',
                 icon_url=author.avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
@@ -121,7 +122,7 @@ class FilterCog(BaseCog[State]):
 
             embed.add_field(
                 name='Text',
-                value=f'```\n{message.clean_content}\n```',
+                value=f'```\n{message.clean_content}\n``` ({message.id})',
                 inline=False
             )
             embed.add_field(
