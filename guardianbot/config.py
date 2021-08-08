@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Union, get_args, get_origin
+from typing import Optional, Union, get_args, get_origin
 
 
 @dataclass(frozen=True)
@@ -10,6 +10,8 @@ class __Config:
     prefix: str
     guild_id: int
     data_dir: str
+
+    git_commit: Optional[str]
 
 
 def __get_value(field):
