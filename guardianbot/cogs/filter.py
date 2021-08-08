@@ -5,7 +5,7 @@ from typing import Dict, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
 from discord.ext import commands, tasks
 
-from ._base import BaseCog
+from ._base import BaseCog, loop_error_handled
 from .. import error_handler, utils
 from ..list_checker import ListChecker
 from ..config import Config
@@ -36,43 +36,34 @@ class FilterCog(BaseCog[State]):
     def cog_unload(self) -> None:
         self._unmute_expired.stop()
 
-    @tasks.loop(minutes=1)
-    async def _unmute_expired(self):
+    @loop_error_handled(minutes=1)
+    async def _unmute_expired(self) -> None:
         if not self._guild:  # task may run before socket is initialized
             return
         if not self.state.muted_role:
             return
 
         logger.debug('checking expired mutes')
-        now = utils.utcnow()
-        changed = False
         role = self._guild.get_role(self.state.muted_role)
         assert role
 
         for user_id, expiry in self.state._muted_users.copy().items():
-            if expiry < now:
+            if expiry < utils.utcnow():
                 logger.info(f'unmuting {user_id}')
 
                 member = self._guild.get_member(int(user_id))
                 if member:
                     await member.remove_roles(role, reason='mute expired')
                 else:
-                    logger.debug('user left guild')
+                    logger.info('user left guild')
                 self.state._muted_users.pop(user_id)
-                changed = True
-
-        if changed:
-            self._write_state()
-
-    @_unmute_expired.error
-    async def _unmute_expired_error(self, exc: Exception) -> None:
-        await error_handler.handle_task_error(self._bot, exc)
+                self._write_state()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         check, reason = await self._should_check(message)
         if not check:
-            logger.debug(f'ignoring message {message.id} by {message.author}, {reason}')
+            logger.info(f'ignoring message {message.id} by {message.author}, {reason}')
             return
 
         if self.blocklist.check_match(message.content):
@@ -135,7 +126,7 @@ class FilterCog(BaseCog[State]):
             )
             embed.add_field(
                 name='Channel',
-                value=message.channel.mention,
+                value=cast(discord.TextChannel, message.channel).mention,
                 inline=False
             )
 
@@ -168,7 +159,7 @@ class FilterCog(BaseCog[State]):
 
     @filter.command(name='add')
     async def filter_add(self, ctx: commands.Context, input: str) -> None:
-        logger.debug(f'adding {input} to list')
+        logger.info(f'adding {input} to list')
         if self.blocklist.entry_add(input):
             await ctx.send(f'Successfully added `{input}`')
         else:
@@ -176,7 +167,7 @@ class FilterCog(BaseCog[State]):
 
     @filter.command(name='remove')
     async def filter_remove(self, ctx: commands.Context, input: str) -> None:
-        logger.debug(f'removing {input} from list')
+        logger.info(f'removing {input} from list')
         if self.blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
         else:

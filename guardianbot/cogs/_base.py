@@ -1,12 +1,14 @@
 import json
 import discord
+import functools
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict, is_dataclass
-from typing import Any, Dict, Generic, TypeVar, get_args
-from discord.ext import commands
+from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
+from discord.ext import commands, tasks
 
 
+from .. import error_handler
 from ..config import Config
 
 
@@ -64,3 +66,19 @@ class BaseCog(Generic[_TState], commands.Cog):
 
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
+
+
+_LoopFunc = Callable[[BaseCog[Any]], Awaitable[None]]
+
+
+def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc], tasks.Loop[_LoopFunc]]:
+    def decorator(f: _LoopFunc) -> _LoopFunc:
+        @functools.wraps(f)
+        async def wrap(self: BaseCog[Any]) -> None:
+            try:
+                await f(self)
+            except Exception as e:
+                await error_handler.handle_task_error(self._bot, e)
+
+        return tasks.loop(**kwargs)(wrap)
+    return decorator
