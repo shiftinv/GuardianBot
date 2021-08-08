@@ -132,6 +132,10 @@ class FilterCog(BaseCog[State]):
 
             await self._bot.get_channel(self.state.report_channel).send(embed=embed)
 
+        if mute:
+            # sanity check to make sure task wasn't stopped for some reason
+            assert self._unmute_expired.is_running()
+
         logger.info(f'successfully blocked message {message.id}')
 
     @commands.group()
