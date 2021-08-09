@@ -187,9 +187,9 @@ class FilterCog(BaseCog[State]):
     # filter list stuff
 
     @filter.command(name='add')
-    async def filter_add(self, ctx: commands.Context, checker: FilterChecker, input: str) -> None:
+    async def filter_add(self, ctx: commands.Context, blocklist: FilterChecker, input: str) -> None:
         logger.info(f'adding {input} to list')
-        res = checker.entry_add(input)
+        res = blocklist.entry_add(input)
         if res is True:
             await ctx.send(f'Successfully added `{input}`')
         elif res is False:
@@ -198,20 +198,20 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'Failed adding `{input}` to list: `{res}`')
 
     @filter.command(name='remove')
-    async def filter_remove(self, ctx: commands.Context, checker: FilterChecker, input: str) -> None:
+    async def filter_remove(self, ctx: commands.Context, blocklist: FilterChecker, input: str) -> None:
         logger.info(f'removing {input} from list')
-        if checker.entry_remove(input):
+        if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
         else:
             await ctx.send(f'List does not contain `{input}`')
 
     @filter.command(name='list')
-    async def filter_list(self, ctx: commands.Context, checker: FilterChecker) -> None:
-        if len(checker) == 0:
+    async def filter_list(self, ctx: commands.Context, blocklist: FilterChecker) -> None:
+        if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
-        s = f'List contains {len(checker)} element(s):\n'
-        s += '```\n' + '\n'.join(checker) + '\n```'
+        s = f'List contains {len(blocklist)} element(s):\n'
+        s += '```\n' + '\n'.join(blocklist) + '\n```'
         await ctx.send(s)
 
     # config stuff

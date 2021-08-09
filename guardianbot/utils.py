@@ -22,4 +22,4 @@ async def wait_timeout(aw: Awaitable[_T], timeout: float, fallback: _U) -> Union
 
 
 def extract_hosts(input: str) -> List[str]:
-    return re.findall(r'https?://([^/\s]+)', input)
+    return re.findall(r'https?://([^/?#\s]+)', input)
