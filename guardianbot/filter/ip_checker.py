@@ -1,21 +1,47 @@
-from ipaddress import IPv4Network
-from typing import Optional, Set, Union
+import socket
+import aiodns
+import asyncio
+import logging
+from ipaddress import IPv4Address, IPv4Network
+from typing import List, Optional, Set, Union
 
 from ._base import BaseChecker
 from .. import utils
 
 
+logger = logging.getLogger(__name__)
+
+
 class IPChecker(BaseChecker):
     def __init__(self):
         self._networks: Set[IPv4Network] = set()
+        self._resolver = aiodns.DNSResolver(['1.1.1.1'])
 
         super().__init__('blocklist_ips.json')
 
+    async def resolve(self, host: str) -> Optional[List[str]]:
+        try:
+            res = await self._resolver.gethostbyname(host, socket.AF_INET)
+            return res.addresses
+        except Exception:
+            return None
+
+    # overridden methods
+
     async def check_match(self, input: str) -> Optional[str]:
-        # TODO
         hosts = utils.extract_hosts(input)
-        if matched := next((s for s in self if s in input), None):
-            return f'filtered IP: `{matched}`'
+        if not hosts:
+            return None
+        logger.debug(f'extracted hosts: {hosts}')
+
+        ips_opt: List[Optional[List[str]]] = await asyncio.gather(*map(self.resolve, hosts))
+        logger.debug(f'resolved IPs: {ips_opt}')
+        ips = [IPv4Address(ip) for ip_list in ips_opt for ip in (ip_list or [])]
+
+        for net in self._networks:
+            for ip in ips:
+                if ip in net:
+                    return f'filtered IP: `{ip}` (matched `{net}`)'
         return None
 
     def entry_add(self, input: str) -> Union[bool, str]:

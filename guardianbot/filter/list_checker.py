@@ -8,6 +8,6 @@ class ListChecker(BaseChecker):
         super().__init__('blocklist.json')
 
     async def check_match(self, input: str) -> Optional[str]:
-        if matched := next((s for s in self if s in input), None):
-            return f'filtered word: `{matched}`'
+        if match := next((s for s in self if s in input), None):
+            return f'filtered word: `{match}`'
         return None
