@@ -61,13 +61,13 @@ class FilterCog(BaseCog[State]):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        check, reason = await self._should_check(message)
+        check, check_reason = await self._should_check(message)
         if not check:
-            logger.info(f'ignoring message {message.id} by {message.author}, {reason}')
+            logger.info(f'ignoring message {message.id} by {message.author}, {check_reason}')
             return
 
-        if self.blocklist.check_match(message.content):
-            await self._handle_blocked(message)
+        if filter_reason := await self.blocklist.check_match(message.content):
+            await self._handle_blocked(message, filter_reason)
 
     async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
         if not message.guild:
@@ -88,8 +88,8 @@ class FilterCog(BaseCog[State]):
 
         return True, ''
 
-    async def _handle_blocked(self, message: discord.Message) -> None:
-        logger.info(f'blocking message {message.id} (\'{message.content}\')')
+    async def _handle_blocked(self, message: discord.Message, reason: str) -> None:
+        logger.info(f'blocking message {message.id} (\'{message.content}\') - {reason}')
 
         # delete message
         await message.delete()
@@ -101,7 +101,7 @@ class FilterCog(BaseCog[State]):
             assert self.state.muted_role  # satisfy the linter
             role = cast(discord.Guild, message.guild).get_role(self.state.muted_role)
             assert role
-            await author.add_roles(role, reason='blocked word/phrase')
+            await author.add_roles(role, reason=reason)
             self.state._muted_users[str(author.id)] = utils.utcnow() + timedelta(minutes=self.state.mute_minutes)
             self._write_state()
 
@@ -117,9 +117,6 @@ class FilterCog(BaseCog[State]):
                 icon_url=author.avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
             )
 
-            if mute:
-                embed.add_field(name='Duration', value=f'{self.state.mute_minutes}m')
-
             embed.add_field(
                 name='Text',
                 value=f'```\n{message.clean_content}\n``` ({message.id})',
@@ -130,6 +127,16 @@ class FilterCog(BaseCog[State]):
                 value=cast(discord.TextChannel, message.channel).mention,
                 inline=False
             )
+
+            embed.add_field(
+                name='Reason',
+                value=reason
+            )
+            if mute:
+                embed.add_field(
+                    name='Duration',
+                    value=f'{self.state.mute_minutes}m'
+                )
 
             await self._bot.get_channel(self.state.report_channel).send(embed=embed)
 
@@ -165,10 +172,13 @@ class FilterCog(BaseCog[State]):
     @filter.command(name='add')
     async def filter_add(self, ctx: commands.Context, input: str) -> None:
         logger.info(f'adding {input} to list')
-        if self.blocklist.entry_add(input):
+        res = self.blocklist.entry_add(input)
+        if res is True:
             await ctx.send(f'Successfully added `{input}`')
-        else:
+        elif res is False:
             await ctx.send(f'List already contains `{input}`')
+        else:
+            await ctx.send(f'Failed adding `{input}` to list: `{res}`')
 
     @filter.command(name='remove')
     async def filter_remove(self, ctx: commands.Context, input: str) -> None:
