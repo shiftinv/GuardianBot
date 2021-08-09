@@ -182,6 +182,7 @@ class FilterCog(BaseCog[State]):
     async def filter_list(self, ctx: commands.Context) -> None:
         if len(self.blocklist) == 0:
             await ctx.send('List contains no elements.')
+            return
         s = f'List contains {len(self.blocklist)} element(s):\n'
         s += '```\n' + '\n'.join(self.blocklist) + '\n```'
         await ctx.send(s)
