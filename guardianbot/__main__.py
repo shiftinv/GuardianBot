@@ -1,3 +1,4 @@
+import sys
 import logging
 import discord
 from discord.ext import commands
@@ -6,6 +7,9 @@ from typing import cast
 from . import cogs, error_handler
 from .cogs._base import BaseCog
 from .config import Config
+
+
+assert sys.version_info[:2] >= (3, 9)
 
 
 logging.basicConfig(format='%(asctime)s: [%(levelname)s] (%(threadName)s) %(name)s: %(message)s', level=logging.INFO)
