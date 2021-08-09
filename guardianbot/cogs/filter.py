@@ -43,8 +43,8 @@ class FilterCog(BaseCog[State]):
         super().__init__(bot)
 
         self.checkers: Dict[str, BaseChecker] = {
-            'blocklist': ListChecker(),
-            'blocklist_ips': IPChecker()
+            'strings': ListChecker(),
+            'ips': IPChecker()
         }
 
         self._unmute_expired.start()
