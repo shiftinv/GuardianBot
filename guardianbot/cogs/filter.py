@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import discord
 from datetime import datetime, timedelta
@@ -7,11 +8,23 @@ from discord.ext import commands
 
 from ._base import BaseCog, loop_error_handled
 from .. import utils
-from ..filter import ListChecker
+from ..filter import BaseChecker, IPChecker, ListChecker
 from ..config import Config
 
 
 logger = logging.getLogger(__name__)
+
+
+class FilterChecker(BaseChecker):
+    @classmethod
+    async def convert(self, ctx: commands.Context, arg: str) -> BaseChecker:
+        cog = ctx.cog
+        assert isinstance(cog, FilterCog)
+        if arg not in cog.checkers:
+            err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
+            await ctx.send(err)
+            raise commands.BadArgument(err)
+        return cog.checkers[arg]
 
 
 @dataclass
@@ -29,7 +42,10 @@ class FilterCog(BaseCog[State]):
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
 
-        self.blocklist = ListChecker()
+        self.checkers: Dict[str, BaseChecker] = {
+            'blocklist': ListChecker(),
+            'blocklist_ips': IPChecker()
+        }
 
         self._unmute_expired.start()
 
@@ -66,8 +82,9 @@ class FilterCog(BaseCog[State]):
             logger.info(f'ignoring message {message.id} by {message.author}, {check_reason}')
             return
 
-        if filter_reason := await self.blocklist.check_match(message.content):
-            await self._handle_blocked(message, filter_reason)
+        for checker in self.checkers.values():
+            if filter_reason := await utils.wait_timeout(checker.check_match(message.content), 5, None):  # 5 second timeout
+                await self._handle_blocked(message, filter_reason)
 
     async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
         if not message.guild:
@@ -170,9 +187,9 @@ class FilterCog(BaseCog[State]):
     # filter list stuff
 
     @filter.command(name='add')
-    async def filter_add(self, ctx: commands.Context, input: str) -> None:
+    async def filter_add(self, ctx: commands.Context, checker: FilterChecker, input: str) -> None:
         logger.info(f'adding {input} to list')
-        res = self.blocklist.entry_add(input)
+        res = checker.entry_add(input)
         if res is True:
             await ctx.send(f'Successfully added `{input}`')
         elif res is False:
@@ -181,20 +198,20 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'Failed adding `{input}` to list: `{res}`')
 
     @filter.command(name='remove')
-    async def filter_remove(self, ctx: commands.Context, input: str) -> None:
+    async def filter_remove(self, ctx: commands.Context, checker: FilterChecker, input: str) -> None:
         logger.info(f'removing {input} from list')
-        if self.blocklist.entry_remove(input):
+        if checker.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
         else:
             await ctx.send(f'List does not contain `{input}`')
 
     @filter.command(name='list')
-    async def filter_list(self, ctx: commands.Context) -> None:
-        if len(self.blocklist) == 0:
+    async def filter_list(self, ctx: commands.Context, checker: FilterChecker) -> None:
+        if len(checker) == 0:
             await ctx.send('List contains no elements.')
             return
-        s = f'List contains {len(self.blocklist)} element(s):\n'
-        s += '```\n' + '\n'.join(self.blocklist) + '\n```'
+        s = f'List contains {len(checker)} element(s):\n'
+        s += '```\n' + '\n'.join(checker) + '\n```'
         await ctx.send(s)
 
     # config stuff
