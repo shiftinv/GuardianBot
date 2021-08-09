@@ -3,11 +3,11 @@ import discord
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from ._base import BaseCog, loop_error_handled
-from .. import error_handler, utils
-from ..list_checker import ListChecker
+from .. import utils
+from ..filter import ListChecker
 from ..config import Config
 
 

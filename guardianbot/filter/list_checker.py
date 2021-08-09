@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Iterator, List
 
-from .config import Config
+from ..config import Config
 
 
 logger = logging.getLogger(__name__)
