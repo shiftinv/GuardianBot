@@ -1,4 +1,5 @@
 import sys
+import asyncio
 import logging
 import discord
 from discord.ext import commands
@@ -10,6 +11,10 @@ from .config import Config
 
 
 assert sys.version_info[:2] >= (3, 9)
+
+# required for aiodns on windows
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 logging.basicConfig(format='%(asctime)s: [%(levelname)s] (%(threadName)s) %(name)s: %(message)s', level=logging.INFO)
