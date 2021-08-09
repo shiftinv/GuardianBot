@@ -3,7 +3,7 @@ import aiodns
 import asyncio
 import logging
 from ipaddress import IPv4Address, IPv4Network
-from typing import List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
 from ._base import BaseChecker
 from .. import utils
@@ -16,15 +16,21 @@ class IPChecker(BaseChecker):
     def __init__(self):
         self._networks: Set[IPv4Network] = set()
         self._resolver = aiodns.DNSResolver(['1.1.1.1'])
+        self._cache: Dict[str, Optional[List[str]]] = {}
 
         super().__init__('blocklist_ips.json')
 
     async def resolve(self, host: str) -> Optional[List[str]]:
+        if host in self._cache:
+            return self._cache[host]
+
         try:
-            res = await self._resolver.gethostbyname(host, socket.AF_INET)
-            return res.addresses
+            addrs = (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
         except Exception:
-            return None
+            addrs = None
+
+        self._cache[host] = addrs
+        return addrs
 
     # overridden methods
 
