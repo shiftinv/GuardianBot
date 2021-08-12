@@ -14,20 +14,21 @@ logger = logging.getLogger(__name__)
 
 class IPChecker(BaseChecker):
     def __init__(self):
-        self._networks: Set[IPv4Network] = set()
         self._resolver = aiodns.DNSResolver(['1.1.1.1'])
-        self._cache: Dict[str, Optional[List[str]]] = {}
+
+        self._networks: Set[IPv4Network] = set()
+        self._cache: Dict[str, List[str]] = {}
 
         super().__init__('blocklist_ips.json')
 
-    async def resolve(self, host: str) -> Optional[List[str]]:
+    async def resolve(self, host: str) -> List[str]:
         if host in self._cache:
             return self._cache[host]
 
         try:
             addrs = (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
         except Exception:
-            addrs = None
+            addrs = []
 
         self._cache[host] = addrs
         return addrs
@@ -40,9 +41,9 @@ class IPChecker(BaseChecker):
             return None
         logger.debug(f'extracted hosts: {hosts}')
 
-        ips_opt: List[Optional[List[str]]] = await asyncio.gather(*map(self.resolve, hosts))
+        ips_opt: List[List[str]] = await asyncio.gather(*map(self.resolve, hosts))
         logger.debug(f'resolved IPs: {ips_opt}')
-        ips = [IPv4Address(ip) for ip_list in ips_opt for ip in (ip_list or [])]
+        ips = [IPv4Address(ip) for ip_list in ips_opt for ip in ip_list]
 
         for net in self._networks:
             for ip in ips:

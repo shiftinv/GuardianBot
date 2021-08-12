@@ -79,7 +79,7 @@ class FilterCog(BaseCog[State]):
     async def on_message(self, message: discord.Message) -> None:
         check, check_reason = await self._should_check(message)
         if not check:
-            logger.info(f'ignoring message {message.id} by {message.author}, {check_reason}')
+            logger.info(f'ignoring message {message.id} by {message.author} ({check_reason})')
             return
 
         for checker in self.checkers.values():
@@ -89,20 +89,20 @@ class FilterCog(BaseCog[State]):
 
     async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
         if not message.guild:
-            return False, 'not checking DMs'
+            return False, 'DM'
         assert message.guild.id == Config.guild_id
         if message.author.bot:
-            return False, 'not checking bots'
+            return False, 'bot'
 
         ctx = await self._bot.get_context(message)  # type: commands.Context
         if ctx.command:
-            return False, 'not checking commands'
+            return False, 'command'
 
         if any(
             discord.utils.get(cast(discord.Member, message.author).roles, id=role_id)
             for role_id in self.state.unfiltered_roles
         ):
-            return False, 'not checking user with unfiltered role'
+            return False, 'user with unfiltered role'
 
         return True, ''
 
@@ -153,7 +153,7 @@ class FilterCog(BaseCog[State]):
             if mute:
                 embed.add_field(
                     name='Duration',
-                    value=f'{self.state.mute_minutes}m'
+                    value=f'{self.state.mute_minutes}min'
                 )
 
             await self._bot.get_channel(self.state.report_channel).send(embed=embed)
@@ -171,7 +171,7 @@ class FilterCog(BaseCog[State]):
     @filter.command(name='muted')
     async def filter_muted(self, ctx: commands.Context) -> None:
         if self.state._muted_users:
-            desc = '`[name]: [expiry]`\n'
+            desc = '`**name**  -  **expiry**`\n'
             desc += '\n'.join(
                 f'<@!{id}>: {discord.utils.format_dt(expiry)}'  # type: ignore  # discord.py-stubs isn't updated yet
                 for id, expiry in self.state._muted_users.items()
@@ -244,7 +244,7 @@ class FilterCog(BaseCog[State]):
         if minutes:
             self.state.mute_minutes = minutes
             self._write_state()
-            await ctx.send(f'Set mute duration to {minutes}m')
+            await ctx.send(f'Set mute duration to {minutes}min')
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
