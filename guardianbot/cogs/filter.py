@@ -85,6 +85,7 @@ class FilterCog(BaseCog[State]):
         for checker in self.checkers.values():
             if filter_reason := await utils.wait_timeout(checker.check_match(message.content), 5, None):  # 5 second timeout
                 await self._handle_blocked(message, filter_reason)
+                break
 
     async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
         if not message.guild:
