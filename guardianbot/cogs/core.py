@@ -53,3 +53,7 @@ class CoreCog(BaseCog[None]):
     @commands.is_owner()
     async def shutdown(self, ctx: commands.Context) -> None:
         await self._bot.close()
+
+    @commands.command()
+    async def say(self, ctx: commands.Context, channel: discord.TextChannel, *, text: str) -> None:
+        await channel.send(text)
