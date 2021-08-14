@@ -2,8 +2,9 @@ import socket
 import aiodns
 import asyncio
 import logging
+import itertools
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, cast
 
 from ._base import BaseChecker
 from .. import utils
@@ -26,7 +27,7 @@ class IPChecker(BaseChecker):
             return self._cache[host]
 
         try:
-            addrs = (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
+            addrs = cast(List[str], (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses)
         except Exception:
             addrs = []
 
@@ -41,9 +42,9 @@ class IPChecker(BaseChecker):
             return None
         logger.debug(f'extracted hosts: {hosts}')
 
-        ips_opt: List[List[str]] = await asyncio.gather(*map(self.resolve, hosts))
-        logger.debug(f'resolved IPs: {ips_opt}')
-        ips = [IPv4Address(ip) for ip_list in ips_opt for ip in ip_list]
+        ip_groups: List[List[str]] = await asyncio.gather(*map(self.resolve, hosts))
+        logger.debug(f'resolved IPs: {ip_groups}')
+        ips = list(map(IPv4Address, itertools.chain(*ip_groups)))
 
         for net in self._networks:
             for ip in ips:
