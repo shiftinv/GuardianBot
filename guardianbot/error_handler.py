@@ -6,10 +6,14 @@ from discord.ext import commands
 from typing import Any, Optional
 
 
+ignored_exc = (commands.errors.UserInputError, commands.errors.CommandNotFound)
+ignored_exc_exact = (commands.errors.CheckFailure, commands.errors.CheckAnyFailure)
+
+
 async def _handle_error(bot: commands.Bot, exc: Optional[Exception]) -> bool:
     try:
         file = None
-        if type(exc) in (commands.errors.CheckFailure, commands.errors.CheckAnyFailure) or isinstance(exc, commands.errors.UserInputError):
+        if type(exc) in ignored_exc_exact or isinstance(exc, ignored_exc):
             # ignore check/command failures
             return True
         elif exc:
