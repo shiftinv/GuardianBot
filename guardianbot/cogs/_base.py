@@ -1,15 +1,19 @@
 import json
+import logging
 import discord
 import functools
 from pathlib import Path
 from datetime import datetime
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
 from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
 from discord.ext import commands, tasks
 
 
 from .. import error_handler
 from ..config import Config
+
+
+logger = logging.getLogger(__name__)
 
 
 class _CustomEncoder(json.JSONEncoder):
@@ -55,7 +59,13 @@ class BaseCog(Generic[_TState], commands.Cog):
             return
 
         if self.__state_path.exists():
-            self.state = self.__state_type(**json.loads(self.__state_path.read_text(), object_hook=_custom_decoder))
+            state_dict: Dict[str, Any] = json.loads(self.__state_path.read_text(), object_hook=_custom_decoder)
+            state_field_names = {field.name for field in fields(self.__state_type)}
+            for key in list(state_dict.keys()):
+                if key not in state_field_names:
+                    logger.warning(f'removing unknown state field in \'{self.__state_path}\': \'{key}\'')
+                    del state_dict[key]
+            self.state = self.__state_type(**state_dict)
         else:
             self.state = self.__state_type()
         self._write_state()
