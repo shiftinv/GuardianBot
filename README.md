@@ -5,7 +5,7 @@ Yet another Discord anti-spam bot, with keyword blocklists and DNS/IP-based link
 
 ## Installation
 
-1. Copy `docker-compose.yml.skel` to `docker-compose.yml`, add the token and set the guild ID
+1. Copy `docker-compose.yml.skel` to `docker-compose.yml`, add the token, guild ID, and muted role ID (see below)
 2. Create the data directory (`_data` by default, see `docker-compose.yml`), and update the permissions (`chmod 777 _data` or `chown 1000:1000 _data`)
 3. Build + Run: `make && docker-compose up`
 
@@ -16,7 +16,6 @@ Yet another Discord anti-spam bot, with keyword blocklists and DNS/IP-based link
 2. Update all (public) channels and deny this new role the `Send Messages` permission
     - this can get tedious pretty quickly, but the bot (currently) can't do that on its own
 3. Update the bot's configuration:
-    - Set the "muted" role: `?filter config muted_role <role_id>`
     - Set the channel to send reports to: `?filter config report_channel <channel_id>`
     - Set the mute duration: `?filter config mute_minutes 1337`
     - Add roles to be excluded from filter: `?filter config unfiltered_roles <role_id>`

@@ -30,7 +30,6 @@ class FilterChecker(BaseChecker):
 @dataclass
 class State:
     report_channel: Optional[int] = None
-    muted_role: Optional[int] = None
     mute_minutes: int = 10
     unfiltered_roles: Set[int] = field(default_factory=set)
 
@@ -56,11 +55,11 @@ class FilterCog(BaseCog[State]):
     async def _unmute_expired(self) -> None:
         if not self._guild:  # task may run before socket is initialized
             return
-        if not self.state.muted_role:
+        if not Config.muted_role_id:
             return
 
         logger.debug('checking expired mutes')
-        role = self._guild.get_role(self.state.muted_role)
+        role = self._guild.get_role(Config.muted_role_id)
         assert role
 
         for user_id, expiry in self.state._muted_users.copy().items():
@@ -114,10 +113,10 @@ class FilterCog(BaseCog[State]):
 
         # mute user
         author = cast(discord.Member, message.author)
-        mute = self.state.muted_role is not None
+        mute = Config.muted_role_id is not None
         if mute:
-            assert self.state.muted_role  # satisfy the linter
-            role = cast(discord.Guild, message.guild).get_role(self.state.muted_role)
+            assert Config.muted_role_id  # satisfy the linter
+            role = cast(discord.Guild, message.guild).get_role(Config.muted_role_id)
             assert role
             await author.add_roles(role, reason=reason)
             self.state._muted_users[str(author.id)] = utils.utcnow() + timedelta(minutes=self.state.mute_minutes)
@@ -229,15 +228,6 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'Set channel to {channel.id}')
         else:
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
-
-    @filter_config.command(name='muted_role')
-    async def filter_config_muted_role(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
-        if role:
-            self.state.muted_role = role.id
-            self._write_state()
-            await ctx.send(f'Set muted role to {role.id}')
-        else:
-            await ctx.send(f'```\nmuted_role = {self.state.muted_role}\n```')
 
     @filter_config.command(name='mute_minutes')
     async def filter_config_mute_minutes(self, ctx: commands.Context, minutes: Optional[int]) -> None:

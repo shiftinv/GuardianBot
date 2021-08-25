@@ -5,9 +5,10 @@ services:
     restart: unless-stopped
     environment:
       DISCORD_DEBUG: '1'
-      DISCORD_TOKEN: '<EMPTY>'
       DISCORD_PREFIX: '?'
-      DISCORD_GUILD_ID: '<EMPTY>'
       DISCORD_DATA_DIR: './data'
+      DISCORD_TOKEN: '<EMPTY>'
+      DISCORD_GUILD_ID: '<EMPTY>'
+      DISCORD_MUTED_ROLE_ID: '<EMPTY>'
     volumes:
       - './_data:/app/data'

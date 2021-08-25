@@ -10,6 +10,7 @@ class __Config:
     prefix: str
     guild_id: int
     data_dir: str
+    muted_role_id: Optional[int]
 
     git_commit: Optional[str]
 
