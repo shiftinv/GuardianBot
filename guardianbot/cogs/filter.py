@@ -171,7 +171,7 @@ class FilterCog(BaseCog[State]):
     @filter.command(name='muted')
     async def filter_muted(self, ctx: commands.Context) -> None:
         if self.state._muted_users:
-            desc = '`**name**  -  **expiry**`\n'
+            desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
                 f'<@!{id}>: {discord.utils.format_dt(expiry)}'  # type: ignore  # discord.py-stubs isn't updated yet
                 for id, expiry in self.state._muted_users.items()
