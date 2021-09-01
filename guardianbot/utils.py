@@ -3,6 +3,8 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Awaitable, List, TypeVar, Union
 
+import discord
+
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
@@ -23,3 +25,7 @@ async def wait_timeout(aw: Awaitable[_T], timeout: float, fallback: _U) -> Union
 
 def extract_hosts(input: str) -> List[str]:
     return re.findall(r'https?://([^/?#<>\s]+)', input)
+
+
+async def add_checkmark(message: discord.Message) -> None:
+    await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
