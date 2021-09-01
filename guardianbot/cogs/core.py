@@ -1,3 +1,4 @@
+import os
 import sys
 import discord
 import humanize
@@ -49,7 +50,7 @@ class CoreCog(BaseCog[None]):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(aliases=(['restart'] if os.path.exists('/.dockerenv') else []))
     @commands.is_owner()
     async def shutdown(self, ctx: commands.Context) -> None:
         await self._bot.close()
