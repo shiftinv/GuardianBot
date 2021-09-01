@@ -128,7 +128,7 @@ class FilterCog(BaseCog[State]):
                 timestamp=utils.utcnow()
             ).set_author(
                 name=f'{prefix} {str(author)} ({author.id})',
-                icon_url=author.avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
+                icon_url=author.display_avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
             )
 
             embed.add_field(
