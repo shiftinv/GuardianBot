@@ -45,7 +45,8 @@ class BaseCog(Generic[_TState], commands.Cog):
         self._bot = bot
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
-        self.__state_type = get_args(type(self).__orig_bases__[0])[0]  # get `_TState` at runtime
+        # get `_TState` at runtime
+        self.__state_type = get_args(type(self).__orig_bases__[0])[0]  # type: ignore
         if self.__state_type is type(None):  # noqa: E721
             self.__state_type = None
         else:
@@ -78,11 +79,12 @@ class BaseCog(Generic[_TState], commands.Cog):
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
 
 
-_LoopFunc = Callable[[BaseCog[Any]], Awaitable[None]]
+# Callable is contravariant in its argument types, no idea how to get covariance to work as expected
+_LoopFunc = Callable[[Any], Awaitable[None]]
 
 
 def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc], tasks.Loop[_LoopFunc]]:
-    def decorator(f: _LoopFunc) -> _LoopFunc:
+    def decorator(f: _LoopFunc) -> tasks.Loop[_LoopFunc]:
         @functools.wraps(f)
         async def wrap(self: BaseCog[Any]) -> None:
             try:
@@ -90,5 +92,5 @@ def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc], tasks.Loop[_LoopF
             except Exception as e:
                 await error_handler.handle_task_error(self._bot, e)
 
-        return tasks.loop(**kwargs)(wrap)
+        return tasks.loop(**kwargs)(wrap)  # type: ignore
     return decorator

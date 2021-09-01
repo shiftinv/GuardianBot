@@ -150,7 +150,8 @@ class FilterCog(BaseCog[State]):
                     value=f'{self.state.mute_minutes}min'
                 )
 
-            await self._bot.get_channel(self.state.report_channel).send(embed=embed)
+            report_channel = cast(discord.TextChannel, self._bot.get_channel(self.state.report_channel))
+            await report_channel.send(embed=embed)
 
         logger.info(f'successfully blocked message {message.id}')
 
