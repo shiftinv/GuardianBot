@@ -1,3 +1,4 @@
+import io
 import logging
 import discord
 from datetime import datetime, timedelta
@@ -217,10 +218,19 @@ class FilterCog(BaseCog[State]):
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
+
         items = list(blocklist) if raw else sorted(blocklist)
         s = f'List contains {len(items)} element(s):\n'
-        s += '```\n' + '\n'.join(items) + '\n```'
-        await ctx.send(s)
+
+        file: Optional[discord.File]
+        if len(items) > 20:  # arbitrary line limit for switching to attachments
+            name = next(k for k, v in self.checkers.items() if v is blocklist)
+            file = discord.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
+        else:
+            s += '```\n' + '\n'.join(items) + '\n```'
+            file = None
+
+        await ctx.send(s, file=file)
 
     # config stuff
 
