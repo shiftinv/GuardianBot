@@ -92,6 +92,8 @@ class FilterCog(BaseCog[State]):
         assert message.guild.id == Config.guild_id
         if message.author.bot:
             return False, 'bot'
+        if message.webhook_id:
+            return False, 'webhook'
 
         ctx = await self._bot.get_context(message)  # type: commands.Context
         if ctx.command:
