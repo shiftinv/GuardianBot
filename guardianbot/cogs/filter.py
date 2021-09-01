@@ -106,13 +106,13 @@ class FilterCog(BaseCog[State]):
         return True, ''
 
     async def _handle_blocked(self, message: discord.Message, reason: str) -> None:
-        logger.info(f'blocking message {message.id} (\'{message.content}\') - {reason}')
+        author = cast(discord.Member, message.author)
+        logger.info(f'blocking message {message.id} by {str(author)}, {author.id} (\'{message.content}\') - {reason}')
 
         # delete message
         await message.delete()
 
         # mute user
-        author = cast(discord.Member, message.author)
         mute = Config.muted_role_id is not None
         if mute:
             await self._mute_user(author, self.state.mute_minutes, reason)
