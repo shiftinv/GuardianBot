@@ -46,3 +46,4 @@ The [core](./guardianbot/cogs/core.py) cog contains a few general-purpose comman
 - A user must either be the bot owner or have the `Manage Messages` permission to be able to issue commands (see [`__main__.global_command_filter`](./guardianbot/__main__.py))
 - Filter automatically excludes commands and other bots, in addition to the specified roles
 - This bot uses [discord.py](https://github.com/Rapptz/discord.py) v2/master, not the current release (v1.7.3 at the time of writing), so be prepared for bugs/stability issues
+- If no muted role is configured, the bot will only delete matching messages and not assign any role

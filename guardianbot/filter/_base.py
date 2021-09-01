@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterator, List, Optional, Union
+from typing import Iterable, Iterator, List, Optional, Sized, Union
 
 from ..config import Config
 
@@ -10,7 +10,7 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-class BaseChecker(ABC):
+class BaseChecker(ABC, Iterable[str], Sized):
     def __init__(self, cache_name: str):
         self.__cache_name = cache_name
         self.__strings: List[str] = []

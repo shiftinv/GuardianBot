@@ -1,8 +1,7 @@
-import asyncio
 import logging
 import discord
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Set, Tuple, cast
+from typing import Dict, Literal, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
 from discord.ext import commands
 
@@ -206,12 +205,13 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'List does not contain `{input}`')
 
     @filter.command(name='list')
-    async def filter_list(self, ctx: commands.Context, blocklist: FilterChecker) -> None:
+    async def filter_list(self, ctx: commands.Context, blocklist: FilterChecker, raw: Optional[Literal['raw']]) -> None:
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
-        s = f'List contains {len(blocklist)} element(s):\n'
-        s += '```\n' + '\n'.join(blocklist) + '\n```'
+        items = list(blocklist) if raw else sorted(blocklist)
+        s = f'List contains {len(items)} element(s):\n'
+        s += '```\n' + '\n'.join(items) + '\n```'
         await ctx.send(s)
 
     # config stuff
