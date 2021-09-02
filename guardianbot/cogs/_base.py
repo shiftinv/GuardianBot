@@ -79,18 +79,18 @@ class BaseCog(Generic[_TState], types.Cog):
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
 
 
-# Callable is contravariant in its argument types, no idea how to get covariance to work as expected
-_LoopFunc = Callable[[Any], Awaitable[None]]
+_CogT = TypeVar('_CogT', bound=BaseCog[Any])
+_LoopFunc = Callable[[_CogT], Awaitable[None]]
 
 
-def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc], tasks.Loop[_LoopFunc]]:
-    def decorator(f: _LoopFunc) -> tasks.Loop[_LoopFunc]:
+def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[None]]:
+    def decorator(f: _LoopFunc[_CogT]) -> tasks.Loop[None]:
         @functools.wraps(f)
-        async def wrap(self: BaseCog[Any]) -> None:
+        async def wrap(self: _CogT) -> None:
             try:
                 await f(self)
             except Exception as e:
                 await error_handler.handle_task_error(self._bot, e)
 
-        return tasks.loop(**kwargs)(wrap)  # type: ignore
+        return tasks.loop(**kwargs)(wrap)
     return decorator
