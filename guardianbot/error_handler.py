@@ -5,12 +5,14 @@ import traceback
 from discord.ext import commands
 from typing import Any, Optional
 
+from . import types
+
 
 ignored_exc = (commands.errors.UserInputError, commands.errors.CommandNotFound)
 ignored_exc_exact = (commands.errors.CheckFailure, commands.errors.CheckAnyFailure)
 
 
-async def _handle_error(bot: commands.Bot, exc: Optional[Exception]) -> bool:
+async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
     try:
         file = None
         if type(exc) in ignored_exc_exact or isinstance(exc, ignored_exc):
@@ -37,21 +39,21 @@ async def _handle_error(bot: commands.Bot, exc: Optional[Exception]) -> bool:
     return False
 
 
-async def handle_task_error(bot: commands.Bot, exc: Exception) -> None:
+async def handle_task_error(bot: types.Bot, exc: Exception) -> None:
     if not await _handle_error(bot, exc):
         print('Exception in task', file=sys.stderr)
         traceback.print_exception(type(exc), exc, exc.__traceback__)
 
 
-def init(bot: commands.Bot) -> None:
+def init(bot: types.Bot) -> None:
     @bot.event
     async def on_error(event: str, *args: Any, **kwargs: Any) -> None:
         exc = sys.exc_info()[1]
         exc = exc if isinstance(exc, Exception) else None
         if not await _handle_error(bot, exc):
-            await type(bot).on_error(bot, event, *args, **kwargs)
+            await super(types.Bot, bot).on_error(event, *args, **kwargs)
 
     @bot.event
-    async def on_command_error(ctx: commands.Context, exc: commands.errors.CommandError) -> None:
+    async def on_command_error(ctx: types.Context, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
-            await type(bot).on_command_error(bot, ctx, exc)
+            await super(types.Bot, bot).on_command_error(ctx, exc)

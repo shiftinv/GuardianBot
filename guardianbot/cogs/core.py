@@ -7,7 +7,7 @@ from discord.ext import commands
 from typing import Optional
 
 from ._base import BaseCog
-from .. import utils
+from .. import utils, types
 from ..config import Config
 
 
@@ -19,7 +19,7 @@ class CoreCog(BaseCog[None]):
         self._start_time = utils.utcnow()
 
     @commands.command()
-    async def info(self, ctx: commands.Context) -> None:
+    async def info(self, ctx: types.Context) -> None:
         embed = discord.Embed()
 
         if Config.git_commit:
@@ -52,9 +52,9 @@ class CoreCog(BaseCog[None]):
 
     @commands.command(aliases=(['restart'] if os.path.exists('/.dockerenv') else []))
     @commands.is_owner()
-    async def shutdown(self, ctx: commands.Context) -> None:
+    async def shutdown(self, ctx: types.Context) -> None:
         await self._bot.close()
 
     @commands.command()
-    async def say(self, ctx: commands.Context, channel: discord.TextChannel, *, text: str) -> None:
+    async def say(self, ctx: types.Context, channel: discord.TextChannel, *, text: str) -> None:
         await channel.send(text)

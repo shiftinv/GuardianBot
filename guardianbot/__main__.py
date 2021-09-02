@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from typing import cast
 
-from . import cogs, error_handler
+from . import cogs, error_handler, types
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -53,7 +53,7 @@ async def on_ready():
 
 
 @bot.check
-async def global_command_filter(ctx: commands.Context) -> bool:
+async def global_command_filter(ctx: types.Context) -> bool:
     if await bot.is_owner(ctx.author):
         return True  # allow owner
     if ctx.guild is not None and cast(discord.Member, ctx.author).guild_permissions.manage_messages:

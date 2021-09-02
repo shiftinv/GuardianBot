@@ -9,7 +9,7 @@ from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
 from discord.ext import commands, tasks
 
 
-from .. import error_handler
+from .. import error_handler, types
 from ..config import Config
 
 
@@ -36,12 +36,12 @@ def _custom_decoder(dct: Dict[str, Any]) -> Any:
 _TState = TypeVar('_TState')
 
 
-class BaseCog(Generic[_TState], commands.Cog):
+class BaseCog(Generic[_TState], types.Cog):
     state: _TState
-    _bot: commands.Bot
+    _bot: types.Bot
     _guild: discord.Guild = None  # type: ignore  # late init
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: types.Bot):
         self._bot = bot
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'

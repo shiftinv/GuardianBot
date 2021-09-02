@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from discord.ext import commands
 
 from ._base import BaseCog, loop_error_handled
-from .. import utils
+from .. import utils, types
 from ..filter import BaseChecker, IPChecker, ListChecker
 from ..config import Config
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class FilterChecker(BaseChecker):
     @classmethod
-    async def convert(self, ctx: commands.Context, arg: str) -> BaseChecker:
+    async def convert(self, ctx: types.Context, arg: str) -> BaseChecker:
         cog = ctx.cog
         assert isinstance(cog, FilterCog)
         if arg not in cog.checkers:
@@ -38,7 +38,7 @@ class State:
 
 
 class FilterCog(BaseCog[State]):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: types.Bot):
         super().__init__(bot)
 
         self.checkers: Dict[str, BaseChecker] = {
@@ -95,7 +95,7 @@ class FilterCog(BaseCog[State]):
         if message.webhook_id:
             return False, 'webhook'
 
-        ctx = await self._bot.get_context(message)  # type: commands.Context
+        ctx = await self._bot.get_context(message)
         if ctx.command:
             return False, 'command'
 
@@ -170,16 +170,16 @@ class FilterCog(BaseCog[State]):
         assert self._unmute_expired.is_running()
 
     @commands.command()
-    async def mute(self, ctx: commands.Context, user: discord.Member, minutes: int) -> None:
+    async def mute(self, ctx: types.Context, user: discord.Member, minutes: int) -> None:
         await self._mute_user(user, minutes, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await utils.add_checkmark(ctx.message)
 
     @commands.group()
-    async def filter(self, ctx: commands.Context) -> None:
+    async def filter(self, ctx: types.Context) -> None:
         pass
 
     @filter.command(name='muted')
-    async def filter_muted(self, ctx: commands.Context) -> None:
+    async def filter_muted(self, ctx: types.Context) -> None:
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
@@ -198,7 +198,7 @@ class FilterCog(BaseCog[State]):
     # filter list stuff
 
     @filter.command(name='add')
-    async def filter_add(self, ctx: commands.Context, blocklist: FilterChecker, input: str) -> None:
+    async def filter_add(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
         logger.info(f'adding {input} to list')
         res = blocklist.entry_add(input)
         if res is True:
@@ -209,7 +209,7 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'Failed adding `{input}` to list: `{res}`')
 
     @filter.command(name='remove')
-    async def filter_remove(self, ctx: commands.Context, blocklist: FilterChecker, input: str) -> None:
+    async def filter_remove(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
         logger.info(f'removing {input} from list')
         if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
@@ -217,7 +217,7 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'List does not contain `{input}`')
 
     @filter.command(name='list')
-    async def filter_list(self, ctx: commands.Context, blocklist: FilterChecker, raw: Optional[Literal['raw']]) -> None:
+    async def filter_list(self, ctx: types.Context, blocklist: FilterChecker, raw: Optional[Literal['raw']]) -> None:
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
@@ -238,11 +238,11 @@ class FilterCog(BaseCog[State]):
     # config stuff
 
     @filter.group(name='config')
-    async def filter_config(self, ctx: commands.Context) -> None:
+    async def filter_config(self, ctx: types.Context) -> None:
         pass
 
     @filter_config.command(name='report_channel')
-    async def filter_config_report_channel(self, ctx: commands.Context, channel: Optional[discord.TextChannel]) -> None:
+    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[discord.TextChannel]) -> None:
         if channel:
             self.state.report_channel = channel.id
             self._write_state()
@@ -251,7 +251,7 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
 
     @filter_config.command(name='mute_minutes')
-    async def filter_config_mute_minutes(self, ctx: commands.Context, minutes: Optional[int]) -> None:
+    async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int]) -> None:
         if minutes:
             self.state.mute_minutes = minutes
             self._write_state()
@@ -260,7 +260,7 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
     @filter_config.command(name='unfiltered_roles')
-    async def filter_config_unfiltered_roles(self, ctx: commands.Context, role: Optional[discord.Role]) -> None:
+    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[discord.Role]) -> None:
         if role:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
