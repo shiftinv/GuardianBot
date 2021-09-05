@@ -174,12 +174,8 @@ class FilterCog(BaseCog[State]):
         await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await utils.add_checkmark(ctx.message)
 
-    @commands.group()
-    async def filter(self, ctx: types.Context) -> None:
-        pass
-
-    @filter.command(name='muted')
-    async def filter_muted(self, ctx: types.Context) -> None:
+    @commands.command()
+    async def muted(self, ctx: types.Context) -> None:
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
@@ -196,6 +192,10 @@ class FilterCog(BaseCog[State]):
         await ctx.send(embed=embed)
 
     # filter list stuff
+
+    @commands.group()
+    async def filter(self, ctx: types.Context) -> None:
+        pass
 
     @filter.command(name='add')
     async def filter_add(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
