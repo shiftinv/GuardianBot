@@ -1,9 +1,11 @@
 import re
 import asyncio
-from datetime import datetime, timezone
+import discord
+from discord.ext import commands
+from datetime import datetime, timedelta, timezone
 from typing import Awaitable, List, TypeVar, Union
 
-import discord
+from . import types
 
 
 _T = TypeVar('_T')
@@ -29,3 +31,25 @@ def extract_hosts(input: str) -> List[str]:
 
 async def add_checkmark(message: discord.Message) -> None:
     await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+
+
+class TimedeltaConverter(timedelta):
+    _re = re.compile(''.join(
+        fr'(?:(?P<{unit}>\d+){unit[0]})?'
+        for unit in ['weeks', 'days', 'hours', 'minutes', 'seconds']
+    ), re.I)
+
+    @classmethod
+    async def convert(cls, ctx: types.Context, arg: str) -> timedelta:
+        if arg.isdigit():
+            return timedelta(minutes=int(arg))
+
+        if not (match := cls._re.fullmatch(arg)):
+            err = 'Invalid argument. Expected number of minutes or string like \'1d2h3m4s\''
+            await ctx.send(err)
+            raise commands.BadArgument(err)
+
+        if len(match.group(0)) == 0:
+            raise commands.BadArgument()
+
+        return timedelta(**{n: int(v) for n, v in match.groupdict(default='0').items()})

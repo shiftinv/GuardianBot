@@ -117,7 +117,7 @@ class FilterCog(BaseCog[State]):
         # mute user
         mute = Config.muted_role_id is not None
         if mute:
-            await self._mute_user(author, self.state.mute_minutes, reason)
+            await self._mute_user(author, timedelta(minutes=self.state.mute_minutes), reason)
 
         # send notification to channel
         if self.state.report_channel:
@@ -157,21 +157,21 @@ class FilterCog(BaseCog[State]):
 
         logger.info(f'successfully blocked message {message.id}')
 
-    async def _mute_user(self, user: discord.Member, minutes: int, reason: Optional[str]) -> None:
+    async def _mute_user(self, user: discord.Member, duration: timedelta, reason: Optional[str]) -> None:
         assert Config.muted_role_id
         role = self._guild.get_role(Config.muted_role_id)
         assert role
 
         await user.add_roles(role, reason=reason)
-        self.state._muted_users[str(user.id)] = utils.utcnow() + timedelta(minutes=minutes)
+        self.state._muted_users[str(user.id)] = utils.utcnow() + duration
         self._write_state()
 
         # sanity check to make sure task wasn't stopped for some reason
         assert self._unmute_expired.is_running()
 
     @commands.command()
-    async def mute(self, ctx: types.Context, user: discord.Member, minutes: int) -> None:
-        await self._mute_user(user, minutes, f'requested by {str(ctx.author)} ({ctx.author.id})')
+    async def mute(self, ctx: types.Context, user: discord.Member, duration: utils.TimedeltaConverter) -> None:
+        await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await utils.add_checkmark(ctx.message)
 
     @commands.group()
