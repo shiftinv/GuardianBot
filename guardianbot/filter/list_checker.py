@@ -9,5 +9,5 @@ class ListChecker(BaseChecker):
 
     async def check_match(self, input: str) -> Optional[str]:
         if match := next((s for s in self if s in input), None):
-            return f'filtered word: `{match}`'
+            return f'filtered string: `{match}`'
         return None

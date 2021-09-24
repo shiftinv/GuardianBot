@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from ._base import BaseCog, loop_error_handled
 from .. import utils, types
-from ..filter import BaseChecker, IPChecker, ListChecker
+from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
 
@@ -43,6 +43,7 @@ class FilterCog(BaseCog[State]):
 
         self.checkers: Dict[str, BaseChecker] = {
             'strings': ListChecker(),
+            'regex': RegexChecker(),
             'ips': IPChecker()
         }
 
