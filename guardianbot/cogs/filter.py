@@ -59,8 +59,7 @@ class FilterCog(BaseCog[State]):
             return
 
         logger.debug('checking expired mutes')
-        role = self._guild.get_role(Config.muted_role_id)
-        assert role
+        role = self._get_muted_role()
 
         for user_id, expiry in self.state._muted_users.copy().items():
             if expiry < utils.utcnow():
@@ -158,9 +157,7 @@ class FilterCog(BaseCog[State]):
         logger.info(f'successfully blocked message {message.id}')
 
     async def _mute_user(self, user: discord.Member, duration: timedelta, reason: Optional[str]) -> None:
-        assert Config.muted_role_id
-        role = self._guild.get_role(Config.muted_role_id)
-        assert role
+        role = self._get_muted_role()
 
         await user.add_roles(role, reason=reason)
         self.state._muted_users[str(user.id)] = utils.utcnow() + duration
@@ -169,9 +166,25 @@ class FilterCog(BaseCog[State]):
         # sanity check to make sure task wasn't stopped for some reason
         assert self._unmute_expired.is_running()
 
+    def _get_muted_role(self) -> discord.Role:
+        assert Config.muted_role_id
+        role = self._guild.get_role(Config.muted_role_id)
+        assert role
+        return role
+
     @commands.command()
     async def mute(self, ctx: types.Context, user: discord.Member, duration: utils.TimedeltaConverter) -> None:
         await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
+        await utils.add_checkmark(ctx.message)
+
+    @commands.command()
+    async def unmute(self, ctx: types.Context, user: discord.Member) -> None:
+        # remove role from user
+        await user.remove_roles(self._get_muted_role())
+
+        # remove user from muted list
+        self.state._muted_users.pop(str(user.id), None)
+
         await utils.add_checkmark(ctx.message)
 
     @commands.command()
