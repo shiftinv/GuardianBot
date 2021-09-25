@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Union
 
 from ._base import BaseChecker
 
@@ -13,3 +13,11 @@ class RegexChecker(BaseChecker):
             if match := re.search(r, input, re.MULTILINE):
                 return f'filtered string: `{match.group()}` (regex: `{r}`)'
         return None
+
+    def entry_add(self, input: str) -> Union[bool, str]:
+        try:
+            re.compile(input)
+        except re.error as e:
+            return str(e)
+
+        return super().entry_add(input)

@@ -220,7 +220,7 @@ class FilterCog(BaseCog[State]):
         elif res is False:
             await ctx.send(f'List already contains `{input}`')
         else:
-            await ctx.send(f'Failed adding `{input}` to list: `{res}`')
+            await ctx.send(f'Unable to add `{input}` to list: `{res}`')
 
     @filter.command(name='remove')
     async def filter_remove(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
