@@ -56,7 +56,7 @@ async def on_ready():
 async def global_command_filter(ctx: types.Context) -> bool:
     if await bot.is_owner(ctx.author):
         return True  # allow owner
-    if ctx.guild is not None and cast(discord.Member, ctx.author).guild_permissions.manage_messages:
+    if ctx.guild and ctx.guild.id == Config.guild_id and cast(discord.Member, ctx.author).guild_permissions.manage_messages:
         return True  # allow users with 'Manage Messages' permission in guild
     return False
 
