@@ -23,7 +23,7 @@ class FilterChecker(BaseChecker):
         if arg not in cog.checkers:
             err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
             await ctx.send(err)
-            raise commands.BadArgument(err)
+            raise utils.suppress_help(commands.BadArgument(err))
         return cog.checkers[arg]
 
 
@@ -208,6 +208,7 @@ class FilterCog(BaseCog[State]):
     # filter list stuff
 
     @commands.group()
+    @utils.strict_group
     async def filter(self, ctx: types.Context) -> None:
         pass
 
@@ -252,6 +253,7 @@ class FilterCog(BaseCog[State]):
     # config stuff
 
     @filter.group(name='config')
+    @utils.strict_group
     async def filter_config(self, ctx: types.Context) -> None:
         pass
 

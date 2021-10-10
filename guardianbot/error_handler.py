@@ -8,6 +8,8 @@ from typing import Any, Optional
 from . import types
 
 
+_attr_suppress_help = '_suppress_help'
+
 ignored_exc = (commands.errors.UserInputError, commands.errors.CommandNotFound)
 ignored_exc_exact = (commands.errors.CheckFailure, commands.errors.CheckAnyFailure)
 
@@ -57,3 +59,11 @@ def init(bot: types.Bot) -> None:
     async def on_command_error(ctx: types.Context, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_command_error(ctx, exc)
+
+        if isinstance(exc, commands.errors.CommandNotFound):
+            # react to unknown commands
+            await ctx.message.add_reaction('❓')
+        elif isinstance(exc, commands.errors.UserInputError) and not getattr(exc, _attr_suppress_help, None):
+            # send help for specific command if the parameters are incorrect
+            assert ctx.command
+            await ctx.send_help(ctx.command)

@@ -1,11 +1,12 @@
 import re
 import asyncio
 import discord
+import functools
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
-from typing import Awaitable, List, TypeVar, Union
+from typing import Any, Awaitable, Callable, Coroutine, List, TypeVar, Union
 
-from . import types
+from . import types, error_handler
 
 
 _T = TypeVar('_T')
@@ -53,3 +54,30 @@ class TimedeltaConverter(timedelta):
             raise commands.BadArgument()
 
         return timedelta(**{n: int(v) for n, v in match.groupdict(default='0').items()})
+
+
+def strict_group(f: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Coroutine[Any, Any, Any]]:
+    '''
+    This decorator wraps a command.group handler, and raises
+     a UserInputError if the group was invoked without a subcommand.
+
+    Without this, no help will be shown if no subcommand or an incorrect subcommand was specified.
+    '''
+    @functools.wraps(f)
+    async def wrapped(self: types.Cog, ctx: commands.Context, *args: Any, **kwargs: Any) -> None:
+        if not ctx.invoked_subcommand:
+            raise commands.UserInputError('no subcommand supplied')
+        return await f(self, ctx, *args, **kwargs)
+    return wrapped
+
+
+_TExc = TypeVar('_TExc', bound=commands.errors.CommandError)
+
+
+def suppress_help(exc: _TExc) -> _TExc:
+    '''
+    Updates the supplied `CommandError` object to suppress sending a help message.
+    (see `on_command_error` in error_handler.py)
+    '''
+    setattr(exc, error_handler._attr_suppress_help, True)
+    return exc
