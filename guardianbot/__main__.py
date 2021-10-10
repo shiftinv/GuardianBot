@@ -3,9 +3,8 @@ import asyncio
 import logging
 import discord
 from discord.ext import commands
-from typing import cast
 
-from . import cogs, error_handler, types
+from . import checks, cogs, error_handler
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -52,15 +51,11 @@ async def on_ready():
             cog._guild = guild
 
 
-@bot.check
-async def global_command_filter(ctx: types.Context) -> bool:
-    if await bot.is_owner(ctx.author):
-        return True  # allow owner
-    if ctx.guild and ctx.guild.id == Config.guild_id and cast(discord.Member, ctx.author).guild_permissions.manage_messages:
-        return True  # allow users with 'Manage Messages' permission in guild
-    return False
+# add global command checks
+bot.check(checks.command_filter())
 
-
+# initialize global error handler
 error_handler.init(bot)
 
+# connect
 bot.run(Config.token)

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from discord.ext import commands
 
 from ._base import BaseCog, loop_error_handled
-from .. import utils, types
+from .. import checks, utils, types
 from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
@@ -51,6 +51,9 @@ class FilterCog(BaseCog[State]):
 
     def cog_unload(self) -> None:
         self._unmute_expired.stop()
+
+    async def cog_check(self, ctx: types.Context) -> bool:
+        return await checks.manage_messages(ctx)
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:
