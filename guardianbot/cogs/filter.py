@@ -96,7 +96,7 @@ class FilterCog(BaseCog[State]):
             return False, 'webhook'
 
         ctx = await self._bot.get_context(message)
-        if ctx.command:
+        if ctx.invoked_with:
             return False, 'command'
 
         if any(
@@ -109,7 +109,7 @@ class FilterCog(BaseCog[State]):
 
     async def _handle_blocked(self, message: discord.Message, reason: str) -> None:
         author = cast(discord.Member, message.author)
-        logger.info(f'blocking message {message.id} by {str(author)}, {author.id} (\'{message.content}\') - {reason}')
+        logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         # delete message
         await message.delete()

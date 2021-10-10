@@ -1,6 +1,6 @@
 # GuardianBot
 
-Yet another Discord anti-spam bot, with keyword blocklists and DNS/IP-based link filtering.
+Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-based link filtering.
 
 
 ## Installation

@@ -30,7 +30,7 @@ def extract_hosts(input: str) -> List[str]:
 
 
 async def add_checkmark(message: discord.Message) -> None:
-    await message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
+    await message.add_reaction('✅')
 
 
 class TimedeltaConverter(timedelta):
