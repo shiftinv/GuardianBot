@@ -10,7 +10,7 @@ from . import types
 
 _attr_suppress_help = '_suppress_help'
 
-ignored_exc = (commands.errors.UserInputError, commands.errors.CommandNotFound)
+ignored_exc = (commands.errors.UserInputError, commands.errors.CommandNotFound, commands.errors.CommandOnCooldown)
 ignored_exc_exact = (commands.errors.CheckFailure, commands.errors.CheckAnyFailure)
 
 
@@ -67,3 +67,5 @@ def init(bot: types.Bot) -> None:
             # send help for specific command if the parameters are incorrect
             assert ctx.command
             await ctx.send_help(ctx.command)
+        elif isinstance(exc, commands.errors.CommandOnCooldown):
+            await ctx.message.add_reaction('🕒')
