@@ -7,7 +7,7 @@ from discord.ext import commands
 from typing import Optional
 
 from ._base import BaseCog
-from .. import utils, types
+from .. import checks, utils, types
 from ..config import Config
 
 
@@ -56,5 +56,6 @@ class CoreCog(BaseCog[None]):
         await self._bot.close()
 
     @commands.command()
+    @commands.check(checks.manage_messages)
     async def say(self, ctx: types.Context, channel: discord.TextChannel, *, text: str) -> None:
         await channel.send(text)
