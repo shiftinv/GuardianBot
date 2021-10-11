@@ -24,9 +24,7 @@ Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-base
 
 ## Usage
 
-(see [guardianbot/cogs/filter.py](./guardianbot/cogs/filter.py) for reference)
-
-There are three types of filter lists, which are checked in order:
+The [filter](./guardianbot/cogs/filter.py) cog handles three types of filter lists, which are checked in order:
 - `strings`, contains keywords which are matched literally (case sensitive)
 - `regex`, contains regular expressions to filter with
 - `ips`, contains IPs or CIDRs (e.g. `127.0.0.0/8`) of domains to filter
@@ -36,16 +34,21 @@ Commands for managing these lists:
 - `?filter remove <list> <keyword/ip>`
 - `?filter list <list> [raw]`
 
+Additionally, there are `?mute <user> <duration>`/`?unmute <user>` commands (self-explanatory), and a `?muted` command to list currently muted users and the expiry.
+
 <br>
 
 The [core](./guardianbot/cogs/core.py) cog contains a few general-purpose commands:
 - `?info` (displays version info, uptime, ping)
 - `?say <channel> <message>` (self-explanatory)
-- `?shutdown`/`?restart` (shuts down the bot, immediately restarting again by default as specified in `docker-compose.yml`).
+    - requires `Manage Messages` permission
+- `?shutdown`/`?restart` (shuts down the bot, immediately restarting again by default as specified in `docker-compose.yml`)
+    - owner-only
 
 
 ## Notes
-- A user must either be the bot owner or have the `Manage Messages` permission to be able to issue commands (see [`__main__.global_command_filter`](./guardianbot/__main__.py))
+
+- A user must either be the bot owner or have the `Manage Messages` permission to be able to issue most commands
 - Filter automatically excludes commands and other bots, in addition to the specified roles
 - This bot uses [discord.py](https://github.com/Rapptz/discord.py) v2/master, not the latest release (v1.7.3 at the time of writing), so be prepared for bugs/stability issues
 - If no muted role is configured, the bot will only delete matching messages and not assign any role
