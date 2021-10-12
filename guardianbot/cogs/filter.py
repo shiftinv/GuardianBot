@@ -47,9 +47,14 @@ class FilterCog(BaseCog[State]):
             'ips': IPChecker()
         }
 
-        self._unmute_expired.start()
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        if Config.muted_role_id:
+            logger.debug('starting unmute loop')
+            self._unmute_expired.start()
 
     def cog_unload(self) -> None:
+        logger.debug('stopping unmute loop')
         self._unmute_expired.stop()
 
     async def cog_check(self, ctx: types.Context) -> bool:
@@ -57,11 +62,6 @@ class FilterCog(BaseCog[State]):
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:
-        if not self._guild:  # task may run before socket is initialized
-            return
-        if not Config.muted_role_id:
-            return
-
         logger.debug('checking expired mutes')
         role = self._get_muted_role()
 
