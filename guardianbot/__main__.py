@@ -1,3 +1,5 @@
+from . import _shim_patch  # magic
+
 import sys
 import asyncio
 import logging
