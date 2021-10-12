@@ -27,7 +27,7 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
             if len(msg) + len(full) < 2000:
                 msg += f'```\n{full}\n```'
             else:
-                file = discord.File(io.StringIO(full), 'traceback.txt')  # type: ignore  # discord.py-stubs isn't updated yet
+                file = discord.File(io.BytesIO(full.encode()), 'traceback.txt')
         else:
             msg = 'something is definitely broken'
 

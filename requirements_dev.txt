@@ -1,0 +1,2 @@
+-r requirements.txt
+discord.py-stubs @ git+https://github.com/shiftinv/discord.py-stubs

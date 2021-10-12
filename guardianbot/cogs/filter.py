@@ -131,7 +131,7 @@ class FilterCog(BaseCog[State]):
                 timestamp=utils.utcnow()
             ).set_author(
                 name=f'{prefix} {str(author)} ({author.id})',
-                icon_url=author.display_avatar.url  # type: ignore  # discord.py-stubs is not updated for 2.0 yet
+                icon_url=author.display_avatar.url
             )
 
             embed.add_field(
@@ -196,7 +196,7 @@ class FilterCog(BaseCog[State]):
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
-                f'<@!{id}>: {discord.utils.format_dt(expiry)}'  # type: ignore  # discord.py-stubs isn't updated yet
+                f'<@!{id}>: {discord.utils.format_dt(expiry)}'
                 for id, expiry in self.state._muted_users.items()
             )
         else:
