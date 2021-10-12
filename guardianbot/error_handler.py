@@ -34,7 +34,7 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
         if not bot.owner_id:
             bot.owner_id = (await bot.application_info()).owner.id
         user = await bot.fetch_user(bot.owner_id)
-        await user.send(msg, file=file)
+        await user.send(msg, file=types.unwrap_opt(file))
     except Exception:
         print('failed sending exception:', file=sys.stderr)
         traceback.print_exc(file=sys.stderr)

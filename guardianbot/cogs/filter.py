@@ -57,7 +57,7 @@ class FilterCog(BaseCog[State]):
         logger.debug('stopping unmute loop')
         self._unmute_expired.stop()
 
-    async def cog_check(self, ctx: types.Context) -> bool:
+    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
         return await checks.manage_messages(ctx)
 
     @loop_error_handled(minutes=1)
@@ -71,7 +71,7 @@ class FilterCog(BaseCog[State]):
 
                 member = self._guild.get_member(int(user_id))
                 if member:
-                    await member.remove_roles(role, reason='mute expired')
+                    await member.remove_roles(types.to_snowflake(role), reason='mute expired')
                 else:
                     logger.info('user left guild')
                 self.state._muted_users.pop(user_id)
@@ -98,7 +98,7 @@ class FilterCog(BaseCog[State]):
         if message.webhook_id:
             return False, 'webhook'
 
-        ctx = await self._bot.get_context(message)
+        ctx: types.Context = await self._bot.get_context(message)
         if ctx.invoked_with:
             return False, 'command'
 
@@ -163,7 +163,7 @@ class FilterCog(BaseCog[State]):
     async def _mute_user(self, user: discord.Member, duration: timedelta, reason: Optional[str]) -> None:
         role = self._get_muted_role()
 
-        await user.add_roles(role, reason=reason)
+        await user.add_roles(types.to_snowflake(role), reason=reason)
         self.state._muted_users[str(user.id)] = utils.utcnow() + duration
         self._write_state()
 
@@ -184,7 +184,7 @@ class FilterCog(BaseCog[State]):
     @commands.command()
     async def unmute(self, ctx: types.Context, user: discord.Member) -> None:
         # remove role from user
-        await user.remove_roles(self._get_muted_role())
+        await user.remove_roles(types.to_snowflake(self._get_muted_role()))
 
         # remove user from muted list
         self.state._muted_users.pop(str(user.id), None)
@@ -251,7 +251,7 @@ class FilterCog(BaseCog[State]):
             s += '```\n' + '\n'.join(items) + '\n```'
             file = None
 
-        await ctx.send(s, file=file)
+        await ctx.send(s, file=types.unwrap_opt(file))
 
     # config stuff
 

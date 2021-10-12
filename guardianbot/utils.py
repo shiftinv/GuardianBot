@@ -64,7 +64,7 @@ def strict_group(f: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Co
     Without this, no help will be shown if no subcommand or an incorrect subcommand was specified.
     '''
     @functools.wraps(f)
-    async def wrapped(self: types.Cog, ctx: commands.Context, *args: Any, **kwargs: Any) -> None:
+    async def wrapped(self: commands.Cog, ctx: types.Context, *args: Any, **kwargs: Any) -> None:
         if not ctx.invoked_subcommand:
             raise commands.UserInputError('no subcommand supplied')
         return await f(self, ctx, *args, **kwargs)

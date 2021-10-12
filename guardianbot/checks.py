@@ -1,12 +1,11 @@
 import discord
-from discord.ext import commands
 from typing import Any, Callable, Coroutine, cast
 
 from . import types
 from .config import Config
 
 
-def command_filter(**perms: bool) -> Callable[[commands.Context], Coroutine[Any, Any, bool]]:
+def command_filter(**perms: bool) -> Callable[[types.Context], Coroutine[Any, Any, bool]]:
     '''
     Returns a command filter that allows commands to be used by:
       - the owner

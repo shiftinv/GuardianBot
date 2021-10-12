@@ -1,12 +1,9 @@
-from . import _shim_patch  # magic
-
 import sys
 import asyncio
 import logging
 import discord
-from discord.ext import commands
 
-from . import checks, cogs, error_handler
+from . import checks, cogs, error_handler, types
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -26,7 +23,7 @@ logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(
+bot = types.Bot(
     command_prefix=Config.prefix,
     intents=intents
 )

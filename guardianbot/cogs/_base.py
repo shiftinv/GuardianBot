@@ -36,7 +36,7 @@ def _custom_decoder(dct: Dict[str, Any]) -> Any:
 _TState = TypeVar('_TState')
 
 
-class BaseCog(Generic[_TState], types.Cog):
+class BaseCog(Generic[_TState], commands.Cog):
     state: _TState
     _bot: types.Bot
     _guild: discord.Guild = None  # type: ignore  # late init
@@ -83,8 +83,8 @@ _CogT = TypeVar('_CogT', bound=BaseCog[Any])
 _LoopFunc = Callable[[_CogT], Awaitable[None]]
 
 
-def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[None]]:
-    def decorator(f: _LoopFunc[_CogT]) -> tasks.Loop[None]:
+def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], types.Loop[_LoopFunc[_CogT]]]:
+    def decorator(f: _LoopFunc[_CogT]) -> types.Loop[_LoopFunc[_CogT]]:
         @functools.wraps(f)
         async def wrap(self: _CogT) -> None:
             try:
