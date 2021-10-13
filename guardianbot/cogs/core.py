@@ -10,7 +10,7 @@ from discord.ext import commands
 from typing import Any, Dict, Optional
 
 from ._base import BaseCog
-from .. import checks, utils, types
+from .. import checks, interactions, utils, types
 from ..config import Config
 
 
@@ -58,16 +58,20 @@ class CoreCog(BaseCog[None]):
 
         await inter.response.send_message(embed=embed)
 
+    @interactions.allow(owner=True)
     @commands.slash_command(
         name='restart' if utils.is_docker() else 'shutdown',
-        description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot'
+        description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot',
+        default_permission=False
     )
     @commands.is_owner()
     async def shutdown(self, inter: types.AppCI) -> None:
         await self._bot.close()
 
+    @interactions.allow_mod
     @commands.slash_command(
-        description='Send a message in another channel using the bot'
+        description='Sends a message in another channel using the bot',
+        default_permission=interactions.allow_mod_default
     )
     @commands.check(checks.manage_messages)
     async def say(self, inter: types.AppCI, channel: discord.TextChannel, *, text: str) -> None:

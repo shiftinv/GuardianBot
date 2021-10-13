@@ -3,7 +3,7 @@ import asyncio
 import logging
 import discord
 
-from . import checks, cogs, error_handler, types
+from . import checks, cogs, interactions, error_handler
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 intents = discord.Intents.default()
 intents.members = True
 
-bot = types.Bot(
+bot = interactions.CustomBot(
     command_prefix=Config.prefix,
     intents=intents,
     test_guilds=[Config.guild_id],
