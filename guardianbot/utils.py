@@ -6,7 +6,7 @@ from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Coroutine, List, TypeVar, Union
 
-from . import types, error_handler
+from . import types
 
 
 _T = TypeVar('_T')
@@ -79,6 +79,7 @@ def suppress_help(exc: _TExc) -> _TExc:
     Updates the supplied `CommandError` object to suppress sending a help message.
     (see `on_command_error` in error_handler.py)
     '''
+    from . import error_handler  # fix circular import
     setattr(exc, error_handler._attr_suppress_help, True)
     return exc
 
