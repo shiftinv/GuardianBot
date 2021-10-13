@@ -5,7 +5,7 @@ import traceback
 from discord.ext import commands
 from typing import Any, Optional
 
-from . import types
+from . import types, utils
 
 
 _attr_suppress_help = '_suppress_help'
@@ -31,9 +31,7 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
         else:
             msg = 'something is definitely broken'
 
-        if not bot.owner_id:
-            bot.owner_id = (await bot.application_info()).owner.id
-        user = await bot.fetch_user(bot.owner_id)
+        user = await bot.fetch_user(await utils.owner_id(bot))
         await user.send(msg, file=types.unwrap_opt(file))
     except Exception:
         print('failed sending exception:', file=sys.stderr)

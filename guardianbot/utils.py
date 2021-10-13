@@ -81,3 +81,11 @@ def suppress_help(exc: _TExc) -> _TExc:
     '''
     setattr(exc, error_handler._attr_suppress_help, True)
     return exc
+
+
+async def owner_id(bot: commands.Bot) -> int:
+    if not bot.owner_id:
+        app_info = await bot.application_info()
+        assert app_info.owner
+        bot.owner_id = app_info.owner.id
+    return bot.owner_id
