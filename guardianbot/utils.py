@@ -1,3 +1,4 @@
+import os
 import re
 import asyncio
 import discord
@@ -93,3 +94,7 @@ async def owner_id(bot: commands.Bot) -> int:
         assert app_info.owner
         bot.owner_id = app_info.owner.id
     return bot.owner_id
+
+
+def is_docker() -> bool:
+    return os.path.exists('/.dockerenv')

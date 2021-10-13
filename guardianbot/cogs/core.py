@@ -1,4 +1,3 @@
-import os
 import sys
 import pprint
 import discord
@@ -25,8 +24,10 @@ class CoreCog(BaseCog[None]):
     async def on_ready(self) -> None:
         self._start_time = utils.utcnow()
 
-    @commands.command()
-    async def info(self, ctx: types.Context) -> None:
+    @commands.slash_command(
+        description='Shows information about the bot'
+    )
+    async def info(self, inter: types.AppCI) -> None:
         embed = discord.Embed()
 
         if Config.git_commit:
@@ -55,17 +56,26 @@ class CoreCog(BaseCog[None]):
             inline=False
         )
 
-        await ctx.send(embed=embed)
+        await inter.response.send_message(embed=embed)
 
-    @commands.command(aliases=(['restart'] if os.path.exists('/.dockerenv') else []))
+    @commands.slash_command(
+        name='restart' if utils.is_docker() else 'shutdown',
+        description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot'
+    )
     @commands.is_owner()
-    async def shutdown(self, ctx: types.Context) -> None:
+    async def shutdown(self, inter: types.AppCI) -> None:
         await self._bot.close()
 
-    @commands.command()
+    @commands.slash_command(
+        description='Send a message in another channel using the bot'
+    )
     @commands.check(checks.manage_messages)
-    async def say(self, ctx: types.Context, channel: discord.TextChannel, *, text: str) -> None:
+    async def say(self, inter: types.AppCI, channel: discord.TextChannel, *, text: str) -> None:
         await channel.send(text)
+        await inter.response.send_message(
+            f'Sent the following message in {channel.mention}:\n'
+            f'```\n{discord.utils.escape_mentions(text)}\n```'
+        )
 
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()
