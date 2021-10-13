@@ -5,14 +5,14 @@ from . import types
 from .config import Config
 
 
-def command_filter(**perms: bool) -> Callable[[types.Context], Coroutine[Any, Any, bool]]:
+def command_filter(**perms: bool) -> Callable[[types.AnyContext], Coroutine[Any, Any, bool]]:
     '''
     Returns a command filter that allows commands to be used by:
       - the owner
       - guild members (in guilds), optionally requiring specified permissions
     '''
 
-    async def func(ctx: types.Context) -> bool:
+    async def func(ctx: types.AnyContext) -> bool:
         if await ctx.bot.is_owner(ctx.author):
             # allow owner
             return True

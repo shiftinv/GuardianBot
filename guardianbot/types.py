@@ -1,10 +1,14 @@
-from typing import Optional, Protocol, TypeVar
 import discord
 from discord.ext import commands
+from typing import Optional, Protocol, TypeVar, Union
 
 
 Bot = commands.Bot
 Context = commands.Context[Bot]
+AppCI = discord.ApplicationCommandInteraction  # shortcut
+
+AnyContext = Union[Context, AppCI]
+
 
 # fix missing import in discord-disnake shim
 import disnake.ext.tasks  # noqa: E402

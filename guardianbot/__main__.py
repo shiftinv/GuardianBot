@@ -25,7 +25,9 @@ intents.members = True
 
 bot = types.Bot(
     command_prefix=Config.prefix,
-    intents=intents
+    intents=intents,
+    test_guilds=[Config.guild_id],
+    sync_commands_debug=Config.debug
 )
 
 bot.add_cog(cogs.CoreCog(bot))
