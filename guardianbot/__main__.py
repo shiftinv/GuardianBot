@@ -53,7 +53,9 @@ async def on_ready():
 
 
 # add global command checks
-bot.check(checks.command_filter())
+cmd_filter = checks.command_filter()
+bot.check(cmd_filter)
+bot.application_command_check(slash_commands=True, user_commands=True, message_commands=True)(cmd_filter)
 
 # initialize global error handler
 error_handler.init(bot)
