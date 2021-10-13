@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Optional, Union, get_args, get_origin
+from typing import List, Optional, Union, get_args, get_origin
 
 
 @dataclass(frozen=True)
@@ -19,18 +19,27 @@ def __get_value(field):
     if get_origin(field.type) is Union:  # Optional[X] is actually Union[X, None]
         args = get_args(field.type)
         assert len(args) == 2 and args[-1] is type(None)  # noqa: E721
-        optional = True
+        is_optional = True
         field_type = args[0]
     else:
-        optional = False
+        is_optional = False
         field_type = field.type
+
+    if get_origin(field_type) is list:
+        is_list = True
+        field_type = get_args(field_type)[0]
+    else:
+        is_list = False
 
     env_name = f'DISCORD_{field.name.upper()}'
     try:
         val_str = os.environ[env_name]
-        return field_type(val_str)
+        if is_list:
+            return list(map(field_type, val_str.split(',')))
+        else:
+            return field_type(val_str)
     except KeyError:
-        if optional:
+        if is_optional:
             return None
         raise RuntimeError(f'Environment variable \'{env_name}\' not set')
     except ValueError as e:
