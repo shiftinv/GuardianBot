@@ -67,3 +67,18 @@ def init(bot: types.Bot) -> None:
             await ctx.send_help(ctx.command)
         elif isinstance(exc, commands.errors.CommandOnCooldown):
             await ctx.message.add_reaction('🕒')
+
+    @bot.event
+    async def on_slash_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
+        if not await _handle_error(bot, exc):
+            await super(types.Bot, bot).on_slash_command_error(inter, exc)
+
+    @bot.event
+    async def on_user_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
+        if not await _handle_error(bot, exc):
+            await super(types.Bot, bot).on_user_command_error(inter, exc)
+
+    @bot.event
+    async def on_message_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
+        if not await _handle_error(bot, exc):
+            await super(types.Bot, bot).on_message_command_error(inter, exc)
