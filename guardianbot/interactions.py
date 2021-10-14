@@ -27,7 +27,7 @@ class CustomBot(commands.Bot):
                 await self._cache_application_commands()
 
             # collect new permissions
-            new_permissions: List[discord.PartialGuildAppCmdPerms] = []
+            new_permissions: Dict[str, discord.PartialGuildAppCmdPerms] = {}
 
             # iterate over registered command handlers
             for command in self.application_commands:
@@ -42,13 +42,19 @@ class CustomBot(commands.Bot):
                 assert guild_command.id is not None  # this should never fail
 
                 # create new permission data
-                new_permissions.append(await reqs.to_perms(self, guild_command.id))
+                assert command.name not in new_permissions
+                new_permissions[command.name] = await reqs.to_perms(self, guild_command.id)
 
             if new_permissions:
-                # TODO: improve logging output
-                logger.debug(f'setting new permissions: {new_permissions}')
-                await self.bulk_edit_command_permissions(guild_id, new_permissions)
+                perms_list = "\n".join(
+                    f'\t{n}: {[p.to_dict() for p in v.permissions]}'
+                    for n, v in new_permissions.items()
+                )
+                logger.debug(f'setting new permissions:\n{perms_list}')
+
+                await self.bulk_edit_command_permissions(guild_id, list(new_permissions.values()))
                 logger.debug('successfully set permissions')
+
         except Exception as e:
             await error_handler.handle_task_error(self, e)
             exit(1)  # can't re-raise, since we're running in a separate task without error handling
