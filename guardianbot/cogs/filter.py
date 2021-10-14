@@ -57,7 +57,7 @@ class FilterCog(BaseCog[State]):
         logger.debug('stopping unmute loop')
         self._unmute_expired.stop()
 
-    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
+    async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return await checks.manage_messages(ctx)
 
     @loop_error_handled(minutes=1)

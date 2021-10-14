@@ -85,6 +85,23 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseCogMeta):
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
 
+    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    async def cog_slash_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    # TODO: test user/message command checks
+    async def cog_user_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    async def cog_message_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    # override in subclasses
+    async def cog_any_check(self, ctx: types.AnyContext) -> bool:
+        return True
+
 
 _CogT = TypeVar('_CogT', bound=BaseCog[Any])
 _LoopFunc = Callable[[_CogT], Awaitable[None]]
