@@ -10,7 +10,7 @@ from discord.ext import commands
 from typing import Any, Dict, Optional
 
 from ._base import BaseCog
-from .. import checks, interactions, utils, types
+from .. import checks, interactions, multicmd, utils, types
 from ..config import Config
 
 
@@ -24,10 +24,10 @@ class CoreCog(BaseCog[None]):
     async def on_ready(self) -> None:
         self._start_time = utils.utcnow()
 
-    @commands.slash_command(
+    @multicmd.command(
         description='Shows information about the bot'
     )
-    async def info(self, inter: types.AppCI) -> None:
+    async def info(self, ctx: types.AnyContext) -> None:
         embed = discord.Embed()
 
         if Config.git_commit:
@@ -56,30 +56,38 @@ class CoreCog(BaseCog[None]):
             inline=False
         )
 
-        await inter.response.send_message(embed=embed)
+        if isinstance(ctx, types.AppCI):
+            await ctx.response.send_message(embed=embed)
+        else:
+            await ctx.send(embed=embed)
 
     @interactions.allow(owner=True)
-    @commands.slash_command(
+    @multicmd.command(
         name='restart' if utils.is_docker() else 'shutdown',
         description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot',
-        default_permission=False
+        slash_kwargs=dict(default_permission=False)
     )
     @commands.is_owner()
-    async def shutdown(self, inter: types.AppCI) -> None:
+    async def shutdown(self, ctx: types.AnyContext) -> None:
         await self._bot.close()
 
     @interactions.allow_mod
-    @commands.slash_command(
+    @multicmd.command(
         description='Sends a message in another channel using the bot',
-        default_permission=interactions.allow_mod_default
+        slash_kwargs=dict(default_permission=interactions.allow_mod_default)
     )
     @commands.check(checks.manage_messages)
-    async def say(self, inter: types.AppCI, channel: discord.TextChannel, *, text: str) -> None:
+    async def say(self, ctx: types.AnyContext, channel: discord.TextChannel, *, text: str) -> None:
         await channel.send(text)
-        await inter.response.send_message(
+
+        msg = (
             f'Sent the following message in {channel.mention}:\n'
             f'```\n{discord.utils.escape_mentions(text)}\n```'
         )
+        if isinstance(ctx, types.AppCI):
+            await ctx.response.send_message(msg)
+        else:
+            await ctx.send(msg)
 
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()

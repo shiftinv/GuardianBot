@@ -5,11 +5,10 @@ import functools
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict, fields, is_dataclass
-from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
+from typing import Any, Awaitable, Callable, Dict, Generic, Type, TypeVar, get_args
 from discord.ext import commands, tasks
 
-
-from .. import error_handler, types
+from .. import error_handler, multicmd, types
 from ..config import Config
 
 
@@ -33,10 +32,18 @@ def _custom_decoder(dct: Dict[str, Any]) -> Any:
     return dct
 
 
+# this is a hack for the multicmd decorator
+class _BaseCogMeta(commands.CogMeta):
+    def __new__(cls: Type['_BaseCogMeta'], *args: Any, **kwargs: Any) -> '_BaseCogMeta':
+        multicmd._fixup_attrs(args[0], args[2])
+        self = super().__new__(cls, *args, **kwargs)
+        return self  # type: ignore[return-value]
+
+
 _TState = TypeVar('_TState')
 
 
-class BaseCog(Generic[_TState], commands.Cog):
+class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseCogMeta):
     state: _TState
     _bot: types.Bot
     _guild: discord.Guild = None  # type: ignore  # late init
