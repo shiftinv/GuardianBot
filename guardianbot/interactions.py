@@ -63,10 +63,6 @@ def allow(
     user_ids: Optional[Dict[int, bool]] = None,
     owner: Optional[bool] = None
 ) -> Callable[[_TCmd], _TCmd]:
-    # TODO: move this assert into dataclass
-    assert any((x is not None) for x in (role_ids, user_ids, owner)), \
-        'One of \'role_ids\', \'user_ids\', \'owner\' must not be `None`'
-
     def wrap(cmd: _TCmd) -> _TCmd:
         app_cmd: InvokableApplicationCommand  # TODO: remove this once _MultiCommand is updated for other types
         if isinstance(cmd, multicmd._MultiCommand):
@@ -100,6 +96,10 @@ class _AppCommandPermissions:
     role_ids: Optional[Dict[int, bool]]
     user_ids: Optional[Dict[int, bool]]
     owner: Optional[bool]
+
+    def __post_init__(self) -> None:
+        if (not self.role_ids) and (not self.user_ids) and self.owner is None:
+            raise discord.errors.InvalidArgument('at least one of \'role_ids\', \'user_ids\', \'owner\' must be set')
 
     async def to_perms(self, bot: commands.Bot, command_id: int) -> discord.PartialGuildAppCmdPerms:
         user_ids = dict(self.user_ids or {})
