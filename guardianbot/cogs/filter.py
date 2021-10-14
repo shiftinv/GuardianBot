@@ -49,7 +49,7 @@ class FilterCog(BaseCog[State]):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        if Config.muted_role_id:
+        if Config.muted_role_id and not self._unmute_expired.is_running():
             logger.debug('starting unmute loop')
             self._unmute_expired.start()
 
