@@ -66,10 +66,12 @@ def strict_group(f: _TCallableCo) -> _TCallableCo:
      a UserInputError if the group was invoked without a subcommand.
 
     Without this, no help will be shown if no subcommand or an incorrect subcommand was specified.
+
+    For application command handlers, this is a no-op.
     '''
     @functools.wraps(f)
-    async def wrapped(self: commands.Cog, ctx: types.Context, *args: Any, **kwargs: Any) -> None:
-        if not ctx.invoked_subcommand:
+    async def wrapped(self: commands.Cog, ctx: types.AnyContext, *args: Any, **kwargs: Any) -> None:
+        if isinstance(ctx, commands.Context) and not ctx.invoked_subcommand:
             raise commands.UserInputError('no subcommand supplied')
         return await f(self, ctx, *args, **kwargs)
     return wrapped  # type: ignore[return-value]
