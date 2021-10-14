@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from discord.ext import commands
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Type
 
 from . import types
 from .config import Config
@@ -45,6 +45,11 @@ async def send_response(ctx: types.AnyContext, content: Optional[str] = None, **
 class _MultiCommand:
     command: commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
     slash_command: commands.InvokableSlashCommand
+
+    # (ab)using __set_name__ for sanity checks
+    def __set_name__(self, owner: Type[commands.Cog], name: str) -> None:
+        from .cogs._base import BaseCog  # avoid circular import
+        assert issubclass(owner, BaseCog), 'multicmd may only be used in types derived from `BaseCog`'
 
 
 # see `_BaseCogMeta`
