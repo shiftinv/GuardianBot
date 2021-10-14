@@ -3,11 +3,9 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.base_core import InvokableApplicationCommand
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, TypeVar
 
-from guardianbot import error_handler
-
-from . import utils
+from . import error_handler, multicmd, utils
 from .config import Config
 
 
@@ -47,6 +45,7 @@ class CustomBot(commands.Bot):
                 new_permissions.append(await reqs.to_perms(self, guild_command.id))
 
             if new_permissions:
+                # TODO: improve logging output
                 logger.debug(f'setting new permissions: {new_permissions}')
                 await self.bulk_edit_command_permissions(guild_id, new_permissions)
                 logger.debug('successfully set permissions')
@@ -55,19 +54,29 @@ class CustomBot(commands.Bot):
             exit(1)  # can't re-raise, since we're running in a separate task without error handling
 
 
+_TCmd = TypeVar('_TCmd', InvokableApplicationCommand, multicmd._MultiCommand)
+
+
 def allow(
     *,
     role_ids: Optional[Dict[int, bool]] = None,
     user_ids: Optional[Dict[int, bool]] = None,
     owner: Optional[bool] = None
-) -> Callable[[InvokableApplicationCommand], InvokableApplicationCommand]:
+) -> Callable[[_TCmd], _TCmd]:
+    # TODO: move this assert into dataclass
     assert any((x is not None) for x in (role_ids, user_ids, owner)), \
         'One of \'role_ids\', \'user_ids\', \'owner\' must not be `None`'
 
-    def wrap(cmd: InvokableApplicationCommand) -> InvokableApplicationCommand:
-        assert cmd.body.default_permission is False, \
-            f'custom command permissions require `default_permission = False` (command: \'{cmd.qualified_name}\')'
-        setattr(cmd, '__app_cmd_perms__', _AppCommandPermissions(
+    def wrap(cmd: _TCmd) -> _TCmd:
+        app_cmd: InvokableApplicationCommand  # TODO: remove this once _MultiCommand is updated for other types
+        if isinstance(cmd, multicmd._MultiCommand):
+            app_cmd = cmd.slash_command
+        else:
+            app_cmd = cmd
+
+        assert app_cmd.body.default_permission is False, \
+            f'custom command permissions require `default_permission = False` (command: \'{app_cmd.qualified_name}\')'
+        setattr(app_cmd, '__app_cmd_perms__', _AppCommandPermissions(
             role_ids=role_ids,
             user_ids=user_ids,
             owner=owner
