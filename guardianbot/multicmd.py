@@ -43,8 +43,8 @@ async def send_response(ctx: types.AnyContext, content: Optional[str] = None, **
 
 @dataclass
 class _MultiCommand:
-    command: commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
-    slash_command: commands.InvokableSlashCommand
+    _command: commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
+    _slash_command: commands.InvokableSlashCommand
 
     # (ab)using __set_name__ for sanity checks
     def __set_name__(self, owner: Type[commands.Cog], name: str) -> None:
@@ -60,7 +60,7 @@ def _fixup_attrs(name: str, attrs: Dict[str, Any]) -> None:
                 # printing, since logging isn't set up at this point yet
                 print(f'patching command and slash command for \'{name}.{k}\'')
 
-            for suffix, cmd in (('cmd', v.command), ('slash', v.slash_command)):
+            for suffix, cmd in (('cmd', v._command), ('slash', v._slash_command)):
                 new_key = f'_{k}_{suffix}'
                 assert new_key not in attrs
                 attrs[new_key] = cmd

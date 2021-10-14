@@ -72,7 +72,7 @@ def allow(
     def wrap(cmd: _TCmd) -> _TCmd:
         app_cmd: InvokableApplicationCommand  # TODO: remove this once _MultiCommand is updated for other types
         if isinstance(cmd, multicmd._MultiCommand):
-            app_cmd = cmd.slash_command
+            app_cmd = cmd._slash_command
         else:
             app_cmd = cmd
 
