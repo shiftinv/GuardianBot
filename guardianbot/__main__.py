@@ -3,7 +3,7 @@ import asyncio
 import logging
 import discord
 
-from . import checks, cogs, interactions, error_handler
+from . import checks, cogs, interactions, error_handler, types
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -50,6 +50,25 @@ async def on_ready():
     for cog in bot.cogs.values():
         if isinstance(cog, BaseCog):
             cog._guild = guild
+
+
+@bot.event
+async def on_command(ctx: types.Context) -> None:
+    logger.debug(
+        f'{str(ctx.author)}/{ctx.author.id} invoked '
+        f'command \'{ctx.message.content}\' '
+        f'in \'{ctx.channel}\''
+    )
+
+
+# TODO: add other (user/message) command events
+@bot.event
+async def on_slash_command(ctx: types.AppCI) -> None:
+    logger.debug(
+        f'{str(ctx.author)}/{ctx.author.id} invoked '
+        f'slash command \'/{ctx.application_command.qualified_name} {ctx.filled_options}\' '
+        f'in \'{ctx.channel}\''
+    )
 
 
 # add global command checks
