@@ -56,10 +56,7 @@ class CoreCog(BaseCog[None]):
             inline=False
         )
 
-        if isinstance(ctx, types.AppCI):
-            await ctx.response.send_message(embed=embed)
-        else:
-            await ctx.send(embed=embed)
+        await multicmd.send_response(ctx, embed=embed)
 
     @interactions.allow(owner=True)
     @multicmd.command(
@@ -80,14 +77,10 @@ class CoreCog(BaseCog[None]):
     async def say(self, ctx: types.AnyContext, channel: discord.TextChannel, *, text: str) -> None:
         await channel.send(text)
 
-        msg = (
-            f'Sent the following message in {channel.mention}:\n'
-            f'```\n{discord.utils.escape_mentions(text)}\n```'
+        await multicmd.send_response(
+            ctx,
+            f'Sent the following message in {channel.mention}:\n```\n{discord.utils.escape_mentions(text)}\n```'
         )
-        if isinstance(ctx, types.AppCI):
-            await ctx.response.send_message(msg)
-        else:
-            await ctx.send(msg)
 
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()

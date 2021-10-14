@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from discord.ext import commands
 from typing import Any, Callable, Dict, Optional
 
+from . import types
 from .config import Config
 
 
@@ -28,6 +29,13 @@ def command(
             )
         )
     return wrap
+
+
+async def send_response(ctx: types.AnyContext, content: Optional[str] = None, **kwargs: Any) -> None:
+    if isinstance(ctx, types.AppCI):
+        await ctx.response.send_message(content, **kwargs)
+    else:
+        await ctx.send(content, **kwargs)
 
 
 #####
