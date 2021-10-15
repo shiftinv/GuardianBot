@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.base_core import InvokableApplicationCommand
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from . import error_handler, multicmd, utils
 from .config import Config
@@ -60,7 +60,13 @@ class CustomBot(commands.Bot):
             exit(1)  # can't re-raise, since we're running in a separate task without error handling
 
 
-_TCmd = TypeVar('_TCmd', InvokableApplicationCommand, multicmd._MultiCommand)
+_TCmd = TypeVar(
+    '_TCmd',
+    InvokableApplicationCommand,
+    # permissions can only be set on top level, not per subcommand/subgroup
+    multicmd._MultiCommand,
+    multicmd._MultiGroup
+)
 
 
 def allow(
@@ -70,11 +76,11 @@ def allow(
     owner: Optional[bool] = None
 ) -> Callable[[_TCmd], _TCmd]:
     def wrap(cmd: _TCmd) -> _TCmd:
-        app_cmd: InvokableApplicationCommand  # TODO: remove this once _MultiCommand is updated for other types
-        if isinstance(cmd, multicmd._MultiCommand):
-            app_cmd = cmd._slash_command
-        else:
+        app_cmd: InvokableApplicationCommand
+        if isinstance(cmd, InvokableApplicationCommand):
             app_cmd = cmd
+        else:
+            app_cmd = cmd._slash_command
 
         assert app_cmd.body.default_permission is False, \
             f'custom command permissions require `default_permission = False` (command: \'{app_cmd.qualified_name}\')'
