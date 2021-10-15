@@ -10,23 +10,21 @@ def command(
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    command_kwargs: Optional[Dict[str, Any]] = None,
+    cmd_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
 ) -> Callable[[Callable[..., Any]], '_MultiCommand']:
     def wrap(f: Callable[..., Any]) -> _MultiCommand:
         return _MultiCommand(
-            commands.Command(
-                f,
-                name=name,
+            commands.command(
+                name=types.unwrap_opt(name),
                 help=description,
-                **(command_kwargs or {})
-            ),
-            commands.InvokableSlashCommand(
-                f,
+                **(cmd_kwargs or {})
+            )(f),
+            commands.slash_command(
                 name=types.unwrap_opt(name),
                 description=types.unwrap_opt(description),
                 **(slash_kwargs or {})
-            )
+            )(f)
         )
     return wrap
 
@@ -35,23 +33,21 @@ def group(
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    command_kwargs: Optional[Dict[str, Any]] = None,
+    cmd_group_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
 ) -> Callable[[Callable[..., Any]], '_MultiGroup']:
     def wrap(f: Callable[..., Any]) -> _MultiGroup:
         return _MultiGroup(
-            commands.Group(
-                f,
-                name=name,
+            commands.group(
+                name=types.unwrap_opt(name),
                 help=description,
-                **(command_kwargs or {})
-            ),
-            commands.InvokableSlashCommand(
-                f,
+                **(cmd_group_kwargs or {})
+            )(f),
+            commands.slash_command(
                 name=types.unwrap_opt(name),
                 description=types.unwrap_opt(description),
                 **(slash_kwargs or {})
-            )
+            )(f)
         )
     return wrap
 
@@ -98,20 +94,20 @@ class _MultiGroupBase(_MultiBase[_AnyGroup, _TSlashGroup]):
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        command_kwargs: Optional[Dict[str, Any]] = None,
-        slash_kwargs: Optional[Dict[str, Any]] = None,
+        cmd_kwargs: Optional[Dict[str, Any]] = None,
+        slash_subcmd_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Callable[[Callable[..., Any]], '_MultiSubCommand']:
         def wrap(f: Callable[..., Any]) -> _MultiSubCommand:
             return _MultiSubCommand(
                 self._command.command(
                     name=types.unwrap_opt(name),
                     help=description,
-                    **(command_kwargs or {})
+                    **(cmd_kwargs or {})
                 )(f),
                 self._slash_command.sub_command(
                     name=types.unwrap_opt(name),
                     description=types.unwrap_opt(description),
-                    **(slash_kwargs or {})
+                    **(slash_subcmd_kwargs or {})
                 )(f)
             )
         return wrap
@@ -124,20 +120,20 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        command_kwargs: Optional[Dict[str, Any]] = None,
-        slash_kwargs: Optional[Dict[str, Any]] = None,
+        cmd_group_kwargs: Optional[Dict[str, Any]] = None,
+        slash_subgroup_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Callable[[Callable[..., Any]], '_MultiSubGroup']:
         def wrap(f: Callable[..., Any]) -> _MultiSubGroup:
             return _MultiSubGroup(
                 self._command.group(
                     name=types.unwrap_opt(name),
                     help=description,
-                    **(command_kwargs or {})
+                    **(cmd_group_kwargs or {})
                 )(f),
                 self._slash_command.sub_command_group(
                     name=types.unwrap_opt(name),
                     description=types.unwrap_opt(description),
-                    **(slash_kwargs or {})
+                    **(slash_subgroup_kwargs or {})
                 )(f)
             )
         return wrap
