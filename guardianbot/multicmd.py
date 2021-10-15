@@ -66,6 +66,7 @@ _AnyCmd = commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
 _AnyGroup = commands.Group[commands.Cog, Any, None]  # type: ignore[type-arg]
 _TCmd = TypeVar('_TCmd', _AnyCmd, _AnyGroup)
 _TSlashCmd = TypeVar('_TSlashCmd', commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand)
+_TSlashGroup = TypeVar('_TSlashGroup', commands.InvokableSlashCommand, commands.SubCommandGroup)
 
 
 @dataclass
@@ -81,14 +82,21 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
 
 @dataclass
 class _MultiCommand(_MultiBase[_AnyCmd, commands.InvokableSlashCommand]):
+    ''' represents a top-level command (without any grouping above/below) '''
     pass
 
 
-_TSlashGroup = TypeVar('_TSlashGroup', commands.InvokableSlashCommand, commands.SubCommandGroup)
+@dataclass
+class _MultiSubCommand(_MultiBase[_AnyCmd, commands.SubCommand]):
+    ''' represents a subcommand, either second-level (in group) or third-level (in subgroup) '''
+    pass
 
 
 @dataclass
 class _MultiGroupBase(_MultiBase[_AnyGroup, _TSlashGroup]):
+    ''' represents an abstract top-level/second-level group '''
+
+    # top-level (_MultiGroup) and second-level (_MultiSubGroup) groups can have subcommands
     def subcommand(
         self,
         *,
@@ -96,7 +104,7 @@ class _MultiGroupBase(_MultiBase[_AnyGroup, _TSlashGroup]):
         description: Optional[str] = None,
         cmd_kwargs: Optional[Dict[str, Any]] = None,
         slash_subcmd_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[Callable[..., Any]], '_MultiSubCommand']:
+    ) -> Callable[[Callable[..., Any]], _MultiSubCommand]:
         def wrap(f: Callable[..., Any]) -> _MultiSubCommand:
             return _MultiSubCommand(
                 self._command.command(
@@ -115,6 +123,9 @@ class _MultiGroupBase(_MultiBase[_AnyGroup, _TSlashGroup]):
 
 @dataclass
 class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
+    ''' represents a top-level group '''
+
+    # only top-level groups can have subgroups
     def subgroup(
         self,
         *,
@@ -141,11 +152,7 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
 
 @dataclass
 class _MultiSubGroup(_MultiGroupBase[commands.SubCommandGroup]):
-    pass
-
-
-@dataclass
-class _MultiSubCommand(_MultiBase[_AnyCmd, commands.SubCommand]):
+    ''' represents a second-level subgroup '''
     pass
 
 

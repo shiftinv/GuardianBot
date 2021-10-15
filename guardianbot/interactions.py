@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.base_core import InvokableApplicationCommand
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, Optional, TypeVar
 
 from . import error_handler, multicmd, utils
 from .config import Config
