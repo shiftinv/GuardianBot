@@ -56,7 +56,10 @@ class TimedeltaConverter(timedelta):
         return timedelta(**{n: int(v) for n, v in match.groupdict(default='0').items()})
 
 
-def strict_group(f: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Coroutine[Any, Any, Any]]:
+_TCallableCo = TypeVar('_TCallableCo', bound=Callable[..., Coroutine[Any, Any, None]])
+
+
+def strict_group(f: _TCallableCo) -> _TCallableCo:
     '''
     This decorator wraps a command.group handler, and raises
      a UserInputError if the group was invoked without a subcommand.
@@ -68,7 +71,7 @@ def strict_group(f: Callable[..., Coroutine[Any, Any, Any]]) -> Callable[..., Co
         if not ctx.invoked_subcommand:
             raise commands.UserInputError('no subcommand supplied')
         return await f(self, ctx, *args, **kwargs)
-    return wrapped
+    return wrapped  # type: ignore[return-value]
 
 
 _TExc = TypeVar('_TExc', bound=commands.errors.CommandError)
