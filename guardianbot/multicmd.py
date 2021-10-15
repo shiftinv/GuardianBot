@@ -24,14 +24,17 @@ def command(
     return wrap
 
 
+_TCog = TypeVar('_TCog', bound=commands.Cog)
+
+
 def group(
     *,
     name: Optional[str] = None,
     description: Optional[str] = None,
     cmd_group_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
-) -> Callable[[Callable[..., Any]], '_MultiGroup']:
-    def wrap(f: Callable[..., Any]) -> _MultiGroup:
+) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiGroup']:
+    def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiGroup:
         return _MultiGroup.create(
             commands.group, commands.slash_command, f,
             name=name,
@@ -149,8 +152,8 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
         description: Optional[str] = None,  # note: this only applies to "standard" commands
         cmd_group_kwargs: Optional[Dict[str, Any]] = None,
         slash_subgroup_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[Callable[..., Any]], '_MultiSubGroup']:
-        def wrap(f: Callable[..., Any]) -> _MultiSubGroup:
+    ) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiSubGroup']:
+        def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiSubGroup:
             return _MultiSubGroup.create(
                 self._command.group, self._slash_command.sub_command_group, f,
                 name=name,
