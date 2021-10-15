@@ -79,8 +79,10 @@ def allow(
         app_cmd: InvokableApplicationCommand
         if isinstance(cmd, InvokableApplicationCommand):
             app_cmd = cmd
-        else:
+        elif isinstance(cmd, (multicmd._MultiCommand, multicmd._MultiGroup)):
             app_cmd = cmd._slash_command
+        else:
+            assert False, f'permissions cannot be set on `{type(cmd).__name__}` objects'
 
         assert app_cmd.body.default_permission is False, \
             f'custom command permissions require `default_permission = False` (command: \'{app_cmd.qualified_name}\')'
