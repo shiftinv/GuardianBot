@@ -22,10 +22,6 @@ class CustomBot(commands.Bot):
 
             guild_id = Config.guild_id
 
-            # TODO: workaround until this is fixed: https://github.com/EQUENOS/disnake/blob/95c1cd4ff2cdf62232ffcba6422e91a6b11a14bb/disnake/state.py#L1590
-            if isinstance(self._connection._guild_application_commands.get(guild_id), set):
-                await self._cache_application_commands()
-
             # collect new permissions
             new_permissions: Dict[str, discord.PartialGuildAppCmdPerms] = {}
 
