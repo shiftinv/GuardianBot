@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from discord.ext import commands
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, cast
 
-from . import types
+from . import types, utils
 from .config import Config
 
 
@@ -36,7 +36,7 @@ def group(
 ) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiGroup']:
     def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiGroup:
         return _MultiGroup.create(
-            commands.group, commands.slash_command, f,
+            commands.group, commands.slash_command, utils.strict_group(f),
             name=name,
             description=description,
             cmd_kwargs=cmd_group_kwargs,
@@ -155,7 +155,7 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
     ) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiSubGroup']:
         def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiSubGroup:
             return _MultiSubGroup.create(
-                self._command.group, self._slash_command.sub_command_group, f,
+                self._command.group, self._slash_command.sub_command_group, utils.strict_group(f),
                 name=name,
                 description=description,
                 cmd_kwargs=cmd_group_kwargs,
