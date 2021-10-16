@@ -57,10 +57,7 @@ class TimedeltaConverter(timedelta):
         return timedelta(**{n: int(v) for n, v in match.groupdict(default='0').items()})
 
 
-_TCallableCo = TypeVar('_TCallableCo', bound=Callable[..., Coroutine[Any, Any, None]])
-
-
-def strict_group(f: _TCallableCo) -> _TCallableCo:
+def strict_group(f: types.THandlerType) -> types.THandlerType:
     '''
     This decorator wraps a command.group handler, and raises
      a UserInputError if the group was invoked without a subcommand.

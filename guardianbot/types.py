@@ -1,13 +1,20 @@
 import discord
 from discord.ext import commands
-from typing import Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Coroutine, Optional, Protocol, TypeVar, Union
 
 
+# general definitions
 Bot = commands.Bot
 Context = commands.Context[Bot]
-AppCI = discord.ApplicationCommandInteraction  # shortcut
 
+
+# useful typing shortcuts
+AppCI = discord.ApplicationCommandInteraction
 AnyContext = Union[Context, AppCI]
+
+NoneCoro = Coroutine[Any, Any, None]
+HandlerType = Callable[..., NoneCoro]
+THandlerType = TypeVar('THandlerType', bound=HandlerType)
 
 
 # fix missing import in discord-disnake shim

@@ -12,8 +12,8 @@ def command(
     description: Optional[str] = None,
     cmd_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
-) -> Callable[[Callable[..., Any]], '_MultiCommand']:
-    def wrap(f: Callable[..., Any]) -> _MultiCommand:
+) -> Callable[[types.HandlerType], '_MultiCommand']:
+    def wrap(f: types.HandlerType) -> _MultiCommand:
         return _MultiCommand.create(
             commands.command, commands.slash_command, f,
             name=name,
@@ -33,8 +33,8 @@ def group(
     description: Optional[str] = None,
     cmd_group_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
-) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiGroup']:
-    def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiGroup:
+) -> Callable[[Callable[[_TCog, types.AnyContext], types.NoneCoro]], '_MultiGroup']:
+    def wrap(f: Callable[[_TCog, types.AnyContext], types.NoneCoro]) -> _MultiGroup:
         return _MultiGroup.create(
             commands.group, commands.slash_command, utils.strict_group(f),
             name=name,
@@ -56,8 +56,7 @@ async def send_response(ctx: types.AnyContext, content: Optional[str] = None, **
 # internal stuff
 
 _T = TypeVar('_T')
-_HandlerType = Callable[..., Any]
-_DecoratorType = Callable[..., Callable[[_HandlerType], _T]]
+_DecoratorType = Callable[..., Callable[[types.HandlerType], _T]]
 
 _AnyCmd = commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
 _AnyGroup = commands.Group[commands.Cog, Any, None]  # type: ignore[type-arg]
@@ -76,7 +75,7 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
         cls: Type[_T],
         cmd_decorator: _DecoratorType[_TCmd],
         slash_decorator: _DecoratorType[_TSlashCmd],
-        func: _HandlerType,
+        func: types.HandlerType,
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
@@ -128,8 +127,8 @@ class _MultiGroupBase(_MultiBase[_AnyGroup, _TSlashGroup]):
         description: Optional[str] = None,
         cmd_kwargs: Optional[Dict[str, Any]] = None,
         slash_subcmd_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[Callable[..., Any]], _MultiSubCommand]:
-        def wrap(f: Callable[..., Any]) -> _MultiSubCommand:
+    ) -> Callable[[types.HandlerType], _MultiSubCommand]:
+        def wrap(f: types.HandlerType) -> _MultiSubCommand:
             return _MultiSubCommand.create(
                 self._command.command, self._slash_command.sub_command, f,
                 name=name,
@@ -152,8 +151,8 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
         description: Optional[str] = None,  # note: this only applies to "standard" commands
         cmd_group_kwargs: Optional[Dict[str, Any]] = None,
         slash_subgroup_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[Callable[[_TCog, types.AnyContext], Any]], '_MultiSubGroup']:
-        def wrap(f: Callable[[_TCog, types.AnyContext], Any]) -> _MultiSubGroup:
+    ) -> Callable[[Callable[[_TCog, types.AnyContext], types.NoneCoro]], '_MultiSubGroup']:
+        def wrap(f: Callable[[_TCog, types.AnyContext], types.NoneCoro]) -> _MultiSubGroup:
             return _MultiSubGroup.create(
                 self._command.group, self._slash_command.sub_command_group, utils.strict_group(f),
                 name=name,
