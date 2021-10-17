@@ -11,8 +11,8 @@ class __Config:
     guild_id: int
     data_dir: str
     muted_role_id: Optional[int]
-
     git_commit: Optional[str]
+    enable_owner_eval: bool = False
 
 
 def __get_value(field):
