@@ -17,9 +17,14 @@ HandlerType = Callable[..., NoneCoro]
 THandlerType = TypeVar('THandlerType', bound=HandlerType)
 
 
-# fix missing import in discord-disnake shim
+# fix missing imports in discord-disnake shim
 import disnake.ext.tasks  # noqa: E402
 Loop = disnake.ext.tasks.Loop
+
+import disnake.ext.commands  # noqa: E402
+Param = disnake.ext.commands.Param
+ParamInfo = disnake.ext.commands.ParamInfo
+option_enum = disnake.ext.commands.option_enum
 
 
 # some typing utils (mostly to work around incorrect interface specs in discord.py):
