@@ -1,6 +1,6 @@
 import os
-from dataclasses import dataclass
-from typing import List, Optional, Union, get_args, get_origin
+from dataclasses import dataclass, MISSING
+from typing import Optional, Union, get_args, get_origin
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,8 @@ def __get_value(field):
     except KeyError:
         if is_optional:
             return None
+        if field.default is not MISSING:
+            return field.default
         raise RuntimeError(f'Environment variable \'{env_name}\' not set')
     except ValueError as e:
         raise ValueError(f'{e} (environment variable: \'{env_name}\')') from e
