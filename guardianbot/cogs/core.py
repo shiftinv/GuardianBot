@@ -129,3 +129,7 @@ class CoreCog(BaseCog[None]):
                 f'Something went wrong{line}:\n'
                 f'```\n{type(e).__name__}: {discord.utils.escape_mentions(str(e))}\n```'
             )
+
+
+def setup(bot: types.Bot) -> None:
+    bot.add_cog(CoreCog(bot))

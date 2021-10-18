@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import asyncio
 import discord
 import functools
@@ -97,3 +98,7 @@ async def owner_id(bot: commands.Bot) -> int:
 
 def is_docker() -> bool:
     return os.path.exists('/.dockerenv')
+
+
+def debugger_active() -> bool:
+    return bool(getattr(sys, 'gettrace', lambda: False)())

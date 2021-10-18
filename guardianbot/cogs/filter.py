@@ -294,3 +294,7 @@ class FilterCog(BaseCog[State]):
                 for role_id in self.state.unfiltered_roles
             )
             await ctx.send(f'```\nunfiltered_roles = {{{roles}}}\n```')
+
+
+def setup(bot: types.Bot) -> None:
+    bot.add_cog(FilterCog(bot))

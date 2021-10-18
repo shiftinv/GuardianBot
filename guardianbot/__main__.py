@@ -3,7 +3,7 @@ import asyncio
 import logging
 import discord
 
-from . import checks, cogs, interactions, error_handler, types
+from . import checks, interactions, error_handler, types, utils
 from .cogs._base import BaseCog
 from .config import Config
 
@@ -28,11 +28,17 @@ bot = interactions.CustomBot(
     intents=intents,
     test_guilds=[Config.guild_id],
     sync_commands_debug=Config.debug,
-    sync_permissions=True
+    sync_permissions=True,
+    reload=utils.debugger_active(),
 )
 
-bot.add_cog(cogs.CoreCog(bot))
-bot.add_cog(cogs.FilterCog(bot))
+
+def load_ext(name: str) -> None:
+    bot.load_extension(name, package=__package__)
+
+
+load_ext('.cogs.core')
+load_ext('.cogs.filter')
 
 
 @bot.event
