@@ -1,64 +1,44 @@
-import logging
 import discord
 from discord.ext import commands
-from discord.ext.commands.base_core import InvokableApplicationCommand
-from dataclasses import dataclass
-from typing import Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Dict, Optional, TypeVar
 
-from . import error_handler, multicmd, utils
+from . import error_handler, multicmd, types, utils
 from .config import Config
 
 
-logger = logging.getLogger(__name__)
-
-
 class CustomBot(commands.Bot):
-    async def _sync_application_commands(self) -> None:
+    async def _sync_application_command_permissions(self) -> None:
         try:
-            # register commands
-            await super()._sync_application_commands()
-            if not self._sync_commands:
-                return
+            owner_id = await utils.owner_id(self)
 
-            guild_id = Config.guild_id
-
-            # collect new permissions
-            new_permissions: Dict[str, discord.PartialGuildAppCmdPerms] = {}
-
-            # iterate over registered command handlers
+            # iterate over defined permissions of all commands
             for command in self.application_commands:
-                # get custom permission data, skip if not set
-                reqs: Optional[_AppCommandPermissions] = getattr(command, '__app_cmd_perms__', None)
-                if not reqs:
-                    continue
+                # make sure `default_permission` is `False` if custom permissions are set
+                if command.permissions:
+                    assert command.body.default_permission is False, \
+                        f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
 
-                # get corresponding guild command (required for guild-specific command ID)
-                guild_command = self.get_guild_command_named(guild_id, command.name)
-                assert guild_command, f'No guild command with name \'{command.name}\' found in cache, something is broken'
-                assert guild_command.id is not None  # this should never fail
+                for partial_perms in command.permissions.values():
+                    # if partial permissions contain marker value, replace with owner ID
+                    owner_perms = discord.utils.get(partial_perms.permissions, id=_owner_marker)
+                    if owner_perms is not None:
+                        assert discord.utils.get(partial_perms.permissions, id=owner_id) is None, \
+                            f'permission override for owner ID ({owner_id}) already exists'
+                        owner_perms.id = owner_id
 
-                # create new permission data
-                assert command.name not in new_permissions
-                new_permissions[command.name] = await reqs.to_perms(self, guild_command.id)
-
-            if new_permissions:
-                perms_list = "\n".join(
-                    f'\t{n}: {[p.to_dict() for p in v.permissions]}'
-                    for n, v in new_permissions.items()
-                )
-                logger.debug(f'setting new permissions:\n{perms_list}')
-
-                await self.bulk_edit_command_permissions(guild_id, list(new_permissions.values()))
-                logger.debug('successfully set permissions')
-
+            # call original func
+            await super()._sync_application_command_permissions()
         except Exception as e:
             await error_handler.handle_task_error(self, e)
             exit(1)  # can't re-raise, since we're running in a separate task without error handling
 
 
+_owner_marker = -123412344321432100112233440011223344  # just a random number (supposed to be an invalid ID)
+
 _TCmd = TypeVar(
     '_TCmd',
-    InvokableApplicationCommand,
+    commands.InvokableApplicationCommand,
+    types.HandlerType,
     # permissions can only be set on top level, not per subcommand/subgroup
     multicmd._MultiCommand,
     multicmd._MultiGroup
@@ -72,54 +52,38 @@ def allow(
     owner: Optional[bool] = None
 ) -> Callable[[_TCmd], _TCmd]:
     def wrap(cmd: _TCmd) -> _TCmd:
-        app_cmd: InvokableApplicationCommand
-        if isinstance(cmd, InvokableApplicationCommand):
-            app_cmd = cmd
-        elif isinstance(cmd, (multicmd._MultiCommand, multicmd._MultiGroup)):
-            app_cmd = cmd._slash_command
-        else:
-            assert False, f'permissions cannot be set on `{type(cmd).__name__}` objects'
+        new_user_ids = dict(user_ids or {})  # copy
+        # add marker ID to user IDs if required
+        if owner is not None:
+            new_user_ids[_owner_marker] = owner
 
-        assert app_cmd.body.default_permission is False, \
-            f'custom command permissions require `default_permission = False` (command: \'{app_cmd.qualified_name}\')'
-        setattr(app_cmd, '__app_cmd_perms__', _AppCommandPermissions(
-            role_ids=role_ids,
-            user_ids=user_ids,
-            owner=owner
-        ))
+        dec = commands.guild_permissions(
+            Config.guild_id,
+            role_ids=types.unwrap_opt(role_ids),
+            user_ids=new_user_ids
+        )
+
+        dec_input: Any
+        if isinstance(cmd, (multicmd._MultiCommand, multicmd._MultiGroup)):
+            dec_input = cmd._slash_command
+        elif isinstance(cmd, multicmd._MultiBase) or not callable(cmd):
+            raise TypeError(f'permissions cannot be set on `{type(cmd).__name__}` objects')
+        else:
+            dec_input = cmd
+
+        # apply decorator to handler func/object
+        r = dec(dec_input)
+        # sanity check to protect against internal changes, since we're not returning the decorator's result
+        assert r is dec_input
+
         return cmd
     return wrap
 
 
-# TODO: wrap slash_command decorator and set default_permission automatically (if arg is None)
 if Config.mod_role_ids:
     allow_mod = allow(owner=True, role_ids=dict.fromkeys(Config.mod_role_ids, True))
     allow_mod_default = False
 else:
     # if no mod role IDs are configured, don't override any permissions
-    allow_mod = lambda x: x  # noqa: E731
+    allow_mod: Callable[[_TCmd], _TCmd] = lambda x: x  # type: ignore[no-redef]  # noqa: E731
     allow_mod_default = True
-
-
-@dataclass(frozen=True)
-class _AppCommandPermissions:
-    role_ids: Optional[Dict[int, bool]]
-    user_ids: Optional[Dict[int, bool]]
-    owner: Optional[bool]
-
-    def __post_init__(self) -> None:
-        if (not self.role_ids) and (not self.user_ids) and self.owner is None:
-            raise discord.errors.InvalidArgument('at least one of \'role_ids\', \'user_ids\', \'owner\' must be set')
-
-    async def to_perms(self, bot: commands.Bot, command_id: int) -> discord.PartialGuildAppCmdPerms:
-        user_ids = dict(self.user_ids or {})
-        # add owner to user IDs
-        if self.owner is not None:
-            owner_id = await utils.owner_id(bot)
-            user_ids[owner_id] = self.owner
-
-        return discord.PartialGuildAppCmdPerms(
-            command_id,
-            role_ids=self.role_ids or {},
-            user_ids=user_ids
-        )

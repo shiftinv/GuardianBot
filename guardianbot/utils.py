@@ -5,7 +5,7 @@ import discord
 import functools
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable, Coroutine, List, TypeVar, Union
+from typing import Any, Awaitable, List, TypeVar, Union
 
 from . import types
 

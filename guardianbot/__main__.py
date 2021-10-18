@@ -27,7 +27,8 @@ bot = interactions.CustomBot(
     command_prefix=Config.prefix,
     intents=intents,
     test_guilds=[Config.guild_id],
-    sync_commands_debug=Config.debug
+    sync_commands_debug=Config.debug,
+    sync_permissions=True
 )
 
 bot.add_cog(cogs.CoreCog(bot))
