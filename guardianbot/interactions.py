@@ -1,6 +1,8 @@
+import sys
 import discord
+import itertools
 from discord.ext import commands
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Callable, Dict, Optional, TypeVar, Union
 
 from . import error_handler, multicmd, types, utils
 from .config import Config
@@ -13,24 +15,25 @@ class CustomBot(commands.Bot):
 
             # iterate over defined permissions of all commands
             for command in self.application_commands:
-                # make sure `default_permission` is `False` if custom permissions are set
-                if command.permissions:
-                    assert command.body.default_permission is False, \
-                        f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
-
+                # if partial permissions contain marker value, replace with owner ID
                 for partial_perms in command.permissions.values():
-                    # if partial permissions contain marker value, replace with owner ID
                     owner_perms = discord.utils.get(partial_perms.permissions, id=_owner_marker)
                     if owner_perms is not None:
                         assert discord.utils.get(partial_perms.permissions, id=owner_id) is None, \
                             f'permission override for owner ID ({owner_id}) already exists'
                         owner_perms.id = owner_id
 
+                # make sure `default_permission` is `False` if custom permissions are set
+                all_perms = list(itertools.chain.from_iterable(p.permissions for p in command.permissions.values()))
+                if all_perms and all(p.permission is True for p in all_perms):
+                    assert command.body.default_permission is False, \
+                        f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
+
             # call original func
             await super()._sync_application_command_permissions()
         except Exception as e:
             await error_handler.handle_task_error(self, e)
-            exit(1)  # can't re-raise, since we're running in a separate task without error handling
+            sys.exit(1)  # can't re-raise, since we're running in a separate task without error handling
 
 
 _owner_marker = -123412344321432100112233440011223344  # just a random number (supposed to be an invalid ID)
@@ -63,7 +66,7 @@ def allow(
             user_ids=new_user_ids
         )
 
-        dec_input: Any
+        dec_input: Union[commands.InvokableApplicationCommand, types.HandlerType]
         if isinstance(cmd, (multicmd._MultiCommand, multicmd._MultiGroup)):
             dec_input = cmd._slash_command
         elif isinstance(cmd, multicmd._MultiBase) or not callable(cmd):
