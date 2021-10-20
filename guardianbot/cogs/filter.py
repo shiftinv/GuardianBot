@@ -62,7 +62,6 @@ class FilterCog(BaseCog[State]):
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:
-        logger.debug('checking expired mutes')
         role = self._get_muted_role()
 
         for user_id, expiry in self.state._muted_users.copy().items():
