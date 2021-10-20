@@ -4,9 +4,10 @@ import sys
 import asyncio
 import discord
 import functools
+import contextlib
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, List, TypeVar, Union
+from typing import Any, AsyncIterator, Awaitable, Iterator, List, TypeVar, Union
 
 from . import types
 
@@ -102,3 +103,30 @@ def is_docker() -> bool:
 
 def debugger_active() -> bool:
     return bool(getattr(sys, 'gettrace', lambda: False)())
+
+
+@contextlib.contextmanager
+def intercept_print_warnings() -> Iterator[None]:
+    class Out:
+        def write(self, message: str) -> None:
+            sys.__stdout__.write(message)
+            if message.startswith('[WARNING]'):
+                raise RuntimeError(message)
+
+    sys.stdout = Out()  # type: ignore
+    try:
+        yield
+    finally:
+        sys.stdout = sys.__stdout__
+
+
+@contextlib.asynccontextmanager
+async def catch_and_exit(bot: types.Bot, *, intercept_warnings: bool = False) -> AsyncIterator[None]:
+    try:
+        ctx = intercept_print_warnings() if intercept_warnings else contextlib.nullcontext()
+        with ctx:
+            yield
+    except Exception as e:
+        from . import error_handler
+        await error_handler.handle_task_error(bot, e)
+        sys.exit(1)

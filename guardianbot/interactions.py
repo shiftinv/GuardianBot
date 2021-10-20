@@ -1,16 +1,15 @@
-import sys
 import discord
 import itertools
 from discord.ext import commands
 from typing import Callable, Dict, Optional, TypeVar, Union
 
-from . import error_handler, multicmd, types, utils
+from . import multicmd, types, utils
 from .config import Config
 
 
 class CustomSyncBot(commands.Bot):
     async def _sync_application_command_permissions(self) -> None:
-        try:
+        async with utils.catch_and_exit(self, intercept_warnings=True):
             owner_id = await utils.owner_id(self)
 
             # iterate over defined permissions of all commands
@@ -30,10 +29,11 @@ class CustomSyncBot(commands.Bot):
                         f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
 
             # call original func
-            await super()._sync_application_command_permissions()
-        except Exception as e:
-            await error_handler.handle_task_error(self, e)
-            sys.exit(1)  # can't re-raise, since we're running in a separate task without error handling
+            return await super()._sync_application_command_permissions()
+
+    async def _sync_application_commands(self) -> None:
+        async with utils.catch_and_exit(self, intercept_warnings=True):
+            return await super()._sync_application_commands()
 
 
 _owner_marker = -123412344321432100112233440011223344  # just a random number (supposed to be an invalid ID)
