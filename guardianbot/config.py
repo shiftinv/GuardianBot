@@ -31,6 +31,16 @@ def __get_value(field):
     else:
         is_list = False
 
+    if field_type is bool:
+        def to_bool(val: str) -> bool:
+            val = val.lower()
+            if val in ('1', 'true', 'yes'):
+                return True
+            elif val in ('0', 'false', 'no'):
+                return False
+            raise ValueError(f'Invalid bool value: \'{val}\'')
+        field_type = to_bool
+
     env_name = f'DISCORD_{field.name.upper()}'
     try:
         val_str = os.environ[env_name]
