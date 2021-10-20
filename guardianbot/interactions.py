@@ -8,7 +8,7 @@ from . import error_handler, multicmd, types, utils
 from .config import Config
 
 
-class CustomBot(commands.Bot):
+class CustomSyncBot(commands.Bot):
     async def _sync_application_command_permissions(self) -> None:
         try:
             owner_id = await utils.owner_id(self)

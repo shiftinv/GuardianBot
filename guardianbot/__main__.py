@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 intents = discord.Intents.default()
 intents.members = True
 
-bot = interactions.CustomBot(
+bot = interactions.CustomSyncBot(
     command_prefix=Config.prefix,
     intents=intents,
     test_guilds=[Config.guild_id],

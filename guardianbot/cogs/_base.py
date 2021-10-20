@@ -8,7 +8,7 @@ from dataclasses import asdict, fields, is_dataclass
 from typing import Any, Awaitable, Callable, Dict, Generic, Type, TypeVar, get_args
 from discord.ext import commands, tasks
 
-from .. import error_handler, multicmd, types
+from .. import error_handler, interactions, multicmd, types
 from ..config import Config
 
 
@@ -49,6 +49,8 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseCogMeta):
     _guild: discord.Guild = None  # type: ignore  # late init
 
     def __init__(self, bot: types.Bot):
+        if not isinstance(bot, interactions.CustomSyncBot):
+            raise TypeError('expected bot to be (a subclass of) `interactions.CustomSyncBot`')
         self._bot = bot
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
