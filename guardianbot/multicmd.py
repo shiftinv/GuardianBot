@@ -204,15 +204,20 @@ class _MultiSubGroup(_MultiGroupBase[commands.SubCommandGroup]):
     pass
 
 
-# see `_BaseCogMeta`
-def _fixup_attrs(name: str, attrs: Dict[str, Any]) -> None:
-    for k, v in attrs.copy().items():
-        if isinstance(v, _MultiBase):
-            if Config.debug:
-                # printing, since logging isn't set up at this point yet
-                print(f'patching command and slash command for \'{name}.{k}\'')
+# this is a hack for the multicmd decorator
+class _MultiCmdMeta(commands.CogMeta):
+    def __new__(cls: Type['_MultiCmdMeta'], *args: Any, **kwargs: Any) -> '_MultiCmdMeta':
+        name, _, attrs = args
+        for k, v in attrs.copy().items():
+            if isinstance(v, _MultiBase):
+                if Config.debug:
+                    # printing, since logging isn't set up at this point yet
+                    print(f'patching command and slash command for \'{name}.{k}\'')
 
-            for suffix, cmd in (('cmd', v._command), ('slash', v._slash_command)):
-                new_key = f'_{k}_{suffix}'
-                assert new_key not in attrs
-                attrs[new_key] = cmd
+                # add command and slash command to namespace
+                for suffix, cmd in (('cmd', v._command), ('slash', v._slash_command)):
+                    new_key = f'_{k}_{suffix}'
+                    assert new_key not in attrs
+                    attrs[new_key] = cmd
+
+        return super().__new__(cls, *args, **kwargs)  # type: ignore[return-value]
