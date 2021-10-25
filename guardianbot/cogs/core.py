@@ -102,7 +102,9 @@ class CoreCog(BaseCog[None]):
         # set global context
         eval_globals = {
             'discord': discord,
-            'ctx': ctx
+            'ctx': ctx,
+            'bot': self._bot,
+            'Config': Config,
         }
 
         code = f'async def _func():\n{textwrap.indent(code, "    ")}'

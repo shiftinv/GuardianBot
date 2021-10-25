@@ -1,3 +1,3 @@
-disnake[discord] @ git+https://github.com/EQUENOS/disnake@a6c37ecc52adf80edaa537efa9dd8d28cd1dc54a
+disnake[discord] @ git+https://github.com/EQUENOS/disnake@f0f9d38b6008fb3af4631a92b256367bea4bd100
 humanize
 aiodns
