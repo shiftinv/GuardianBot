@@ -127,6 +127,8 @@ async def catch_and_exit(bot: types.Bot, *, intercept_warnings: bool = False) ->
         with ctx:
             yield
     except Exception as e:
-        from . import error_handler
-        await error_handler.handle_task_error(bot, e)
-        sys.exit(1)
+        try:
+            from . import error_handler
+            await error_handler.handle_task_error(bot, e)
+        finally:
+            sys.exit(1)
