@@ -12,7 +12,7 @@ class CustomSyncBot(commands.Bot):
                 # make sure `default_permission` is `False` if custom permissions are set
                 all_perms: List[bool] = []
                 for u in command.permissions.values():
-                    for p in (u.permissions, u.role_ids, u.user_ids, {None: u.owner} if u.owner is not None else None):
+                    for p in (u.permissions, u.roles, u.users, {None: u.owner} if u.owner is not None else None):
                         if not p:
                             continue
                         all_perms.extend(p.values())
@@ -40,15 +40,15 @@ _TCmd = TypeVar(
 
 def allow(
     *,
-    role_ids: Optional[Dict[int, bool]] = None,
-    user_ids: Optional[Dict[int, bool]] = None,
+    roles: Optional[Dict[int, bool]] = None,
+    users: Optional[Dict[int, bool]] = None,
     owner: Optional[bool] = None
 ) -> Callable[[_TCmd], _TCmd]:
     def wrap(cmd: _TCmd) -> _TCmd:
         dec = commands.guild_permissions(
             Config.guild_id,
-            role_ids=types.unwrap_opt(role_ids),
-            user_ids=types.unwrap_opt(user_ids),
+            roles=types.unwrap_opt(roles),
+            users=types.unwrap_opt(users),
             owner=types.unwrap_opt(owner),
         )
 
@@ -70,7 +70,7 @@ def allow(
 
 
 if Config.mod_role_ids:
-    allow_mod = allow(owner=True, role_ids=dict.fromkeys(Config.mod_role_ids, True))
+    allow_mod = allow(owner=True, roles=dict.fromkeys(Config.mod_role_ids, True))
     allow_mod_default = False
 else:
     # if no mod role IDs are configured, don't override any permissions
