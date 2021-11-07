@@ -144,3 +144,5 @@ venv*/
 data/
 _data/
 docker-compose.yml
+
+*/cogs/test.py
