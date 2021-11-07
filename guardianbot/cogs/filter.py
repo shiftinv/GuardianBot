@@ -1,10 +1,10 @@
 import io
 import logging
-import discord
+import disnake
 from datetime import datetime, timedelta
 from typing import Dict, Literal, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
-from discord.ext import commands
+from disnake.ext import commands
 
 from ._base import BaseCog, loop_error_handled
 from .. import checks, utils, types
@@ -77,7 +77,7 @@ class FilterCog(BaseCog[State]):
                 self._write_state()
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         check, check_reason = await self._should_check(message)
         if not check:
             logger.info(f'ignoring message {message.id} by {message.author} ({check_reason})')
@@ -88,7 +88,7 @@ class FilterCog(BaseCog[State]):
                 await self._handle_blocked(message, filter_reason)
                 break
 
-    async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
+    async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
         if not message.guild:
             return False, 'DM'
         assert message.guild.id == Config.guild_id
@@ -102,15 +102,15 @@ class FilterCog(BaseCog[State]):
             return False, 'command'
 
         if any(
-            discord.utils.get(cast(discord.Member, message.author).roles, id=role_id)
+            disnake.utils.get(cast(disnake.Member, message.author).roles, id=role_id)
             for role_id in self.state.unfiltered_roles
         ):
             return False, 'user with unfiltered role'
 
         return True, ''
 
-    async def _handle_blocked(self, message: discord.Message, reason: str) -> None:
-        author = cast(discord.Member, message.author)
+    async def _handle_blocked(self, message: disnake.Message, reason: str) -> None:
+        author = cast(disnake.Member, message.author)
         logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         # delete message
@@ -124,7 +124,7 @@ class FilterCog(BaseCog[State]):
         # send notification to channel
         if self.state.report_channel:
             prefix = 'Muted' if mute else 'Blocked message by'
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 color=0x992e22,
                 description=author.mention,
                 timestamp=utils.utcnow()
@@ -140,7 +140,7 @@ class FilterCog(BaseCog[State]):
             )
             embed.add_field(
                 name='Channel',
-                value=cast(discord.TextChannel, message.channel).mention,
+                value=cast(disnake.TextChannel, message.channel).mention,
                 inline=False
             )
 
@@ -154,12 +154,12 @@ class FilterCog(BaseCog[State]):
                     value=f'{self.state.mute_minutes}min'
                 )
 
-            report_channel = cast(discord.TextChannel, self._bot.get_channel(self.state.report_channel))
+            report_channel = cast(disnake.TextChannel, self._bot.get_channel(self.state.report_channel))
             await report_channel.send(embed=embed)
 
         logger.info(f'successfully blocked message {message.id}')
 
-    async def _mute_user(self, user: discord.Member, duration: timedelta, reason: Optional[str]) -> None:
+    async def _mute_user(self, user: disnake.Member, duration: timedelta, reason: Optional[str]) -> None:
         role = self._get_muted_role()
 
         await user.add_roles(types.to_snowflake(role), reason=reason)
@@ -169,19 +169,19 @@ class FilterCog(BaseCog[State]):
         # sanity check to make sure task wasn't stopped for some reason
         assert self._unmute_expired.is_running()
 
-    def _get_muted_role(self) -> discord.Role:
+    def _get_muted_role(self) -> disnake.Role:
         assert Config.muted_role_id
         role = self._guild.get_role(Config.muted_role_id)
         assert role
         return role
 
     @commands.command()
-    async def mute(self, ctx: types.Context, user: discord.Member, duration: utils.TimedeltaConverter) -> None:
+    async def mute(self, ctx: types.Context, user: disnake.Member, duration: utils.TimedeltaConverter) -> None:
         await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await utils.add_checkmark(ctx.message)
 
     @commands.command()
-    async def unmute(self, ctx: types.Context, user: discord.Member) -> None:
+    async def unmute(self, ctx: types.Context, user: disnake.Member) -> None:
         # remove role from user
         await user.remove_roles(types.to_snowflake(self._get_muted_role()))
 
@@ -195,13 +195,13 @@ class FilterCog(BaseCog[State]):
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
-                f'<@!{id}>: {discord.utils.format_dt(expiry)}'
+                f'<@!{id}>: {disnake.utils.format_dt(expiry)}'
                 for id, expiry in self.state._muted_users.items()
             )
         else:
             desc = 'none'
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title='Currently muted users',
             description=desc
         )
@@ -242,10 +242,10 @@ class FilterCog(BaseCog[State]):
         items = list(blocklist) if raw else sorted(blocklist)
         s = f'List contains {len(items)} element(s):\n'
 
-        file: Optional[discord.File]
+        file: Optional[disnake.File]
         if len(items) > 20:  # arbitrary line limit for switching to attachments
             name = next(k for k, v in self.checkers.items() if v is blocklist)
-            file = discord.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
+            file = disnake.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
         else:
             s += '```\n' + '\n'.join(items) + '\n```'
             file = None
@@ -260,7 +260,7 @@ class FilterCog(BaseCog[State]):
         pass
 
     @filter_config.command(name='report_channel')
-    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[discord.TextChannel]) -> None:
+    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[disnake.TextChannel]) -> None:
         if channel:
             self.state.report_channel = channel.id
             self._write_state()
@@ -278,7 +278,7 @@ class FilterCog(BaseCog[State]):
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
     @filter_config.command(name='unfiltered_roles')
-    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[discord.Role]) -> None:
+    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[disnake.Role]) -> None:
         if role:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)

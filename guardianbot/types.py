@@ -1,5 +1,5 @@
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 from typing import Any, Callable, Coroutine, Optional, Protocol, TypeVar, Union
 
 
@@ -9,22 +9,12 @@ Context = commands.Context[Bot]
 
 
 # useful typing shortcuts
-AppCI = discord.ApplicationCommandInteraction
+AppCI = disnake.ApplicationCommandInteraction
 AnyContext = Union[Context, AppCI]
 
 NoneCoro = Coroutine[Any, Any, None]
 HandlerType = Callable[..., NoneCoro]
 THandlerType = TypeVar('THandlerType', bound=HandlerType)
-
-
-# fix missing imports in discord-disnake shim
-import disnake.ext.tasks  # noqa: E402
-Loop = disnake.ext.tasks.Loop
-
-import disnake.ext.commands  # noqa: E402
-Param = disnake.ext.commands.Param
-ParamInfo = disnake.ext.commands.ParamInfo
-option_enum = disnake.ext.commands.option_enum
 
 
 # some typing utils (mostly to work around incorrect interface specs in discord.py):
@@ -36,7 +26,7 @@ class _SupportsID(Protocol):
     id: int
 
 
-def to_snowflake(val: _SupportsID) -> discord.abc.Snowflake:
+def to_snowflake(val: _SupportsID) -> disnake.abc.Snowflake:
     return val  # type: ignore
 
 

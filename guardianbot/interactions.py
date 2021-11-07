@@ -1,4 +1,4 @@
-from discord.ext import commands
+from disnake.ext import commands
 from typing import Callable, Dict, List, Optional, TypeVar, Union
 
 from . import multicmd, types, utils

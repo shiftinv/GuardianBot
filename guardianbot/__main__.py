@@ -1,7 +1,7 @@
 import sys
 import asyncio
 import logging
-import discord
+import disnake
 
 from . import checks, interactions, error_handler, types, utils
 from .cogs._base import BaseCog
@@ -20,7 +20,7 @@ logger = logging.getLogger('guardianbot')
 logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 
 
-intents = discord.Intents.default()
+intents = disnake.Intents.default()
 intents.members = True
 
 bot = interactions.CustomSyncBot(
@@ -43,9 +43,9 @@ load_ext('.cogs.filter')
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='Link(s)'))
+    await bot.change_presence(activity=disnake.Activity(type=disnake.ActivityType.watching, name='Link(s)'))
 
-    guild = discord.utils.get(bot.guilds, id=Config.guild_id)
+    guild = disnake.utils.get(bot.guilds, id=Config.guild_id)
     assert guild, f'couldn\'t find guild with ID {Config.guild_id}'
     logger.info(
         f'{bot.user} is connected to the following guild:\n'

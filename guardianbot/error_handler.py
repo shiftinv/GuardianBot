@@ -1,8 +1,8 @@
 import io
 import sys
-import discord
+import disnake
 import traceback
-from discord.ext import commands
+from disnake.ext import commands
 from typing import Any, Optional
 
 from . import types, utils
@@ -27,7 +27,7 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
             if len(msg) + len(full) < 2000:
                 msg += f'```\n{full}\n```'
             else:
-                file = discord.File(io.BytesIO(full.encode()), 'traceback.txt')
+                file = disnake.File(io.BytesIO(full.encode()), 'traceback.txt')
         else:
             msg = 'something is definitely broken'
 

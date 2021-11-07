@@ -1,12 +1,12 @@
 import sys
 import pprint
-import discord
+import disnake
 import logging
 import humanize
 import textwrap
 import traceback
 from datetime import datetime
-from discord.ext import commands
+from disnake.ext import commands
 from typing import Any, Dict, Optional
 
 from ._base import BaseCog
@@ -28,7 +28,7 @@ class CoreCog(BaseCog[None]):
         description='Shows information about the bot'
     )
     async def info(self, ctx: types.AnyContext) -> None:
-        embed = discord.Embed()
+        embed = disnake.Embed()
 
         if Config.git_commit:
             embed.add_field(
@@ -37,7 +37,7 @@ class CoreCog(BaseCog[None]):
             )
         embed.add_field(
             name='discord.py',
-            value=discord.__version__
+            value=disnake.__version__
         )
         embed.add_field(
             name='Python',
@@ -74,12 +74,12 @@ class CoreCog(BaseCog[None]):
         slash_kwargs=dict(default_permission=interactions.allow_mod_default)
     )
     @commands.check(checks.manage_messages)
-    async def say(self, ctx: types.AnyContext, channel: discord.TextChannel, *, text: str) -> None:
+    async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
         await channel.send(text)
 
         await multicmd.send_response(
             ctx,
-            f'Sent the following message in {channel.mention}:\n```\n{discord.utils.escape_mentions(text)}\n```'
+            f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```'
         )
 
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
@@ -101,7 +101,8 @@ class CoreCog(BaseCog[None]):
 
         # set global context
         eval_globals = {
-            'discord': discord,
+            'discord': disnake,
+            'disnake': disnake,
             'ctx': ctx,
             'bot': self._bot,
             'Config': Config,
@@ -113,7 +114,7 @@ class CoreCog(BaseCog[None]):
             loc: Dict[str, Any] = {}
             exec(code, eval_globals, loc)
             result = await loc['_func']()
-            await ctx.send(f'```\n{discord.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```')
+            await ctx.send(f'```\n{disnake.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```')
         except Exception as e:
             logger.exception('failed evaluating code')
 
@@ -129,7 +130,7 @@ class CoreCog(BaseCog[None]):
 
             await ctx.send(
                 f'Something went wrong{line}:\n'
-                f'```\n{type(e).__name__}: {discord.utils.escape_mentions(str(e))}\n```'
+                f'```\n{type(e).__name__}: {disnake.utils.escape_mentions(str(e))}\n```'
             )
 
 

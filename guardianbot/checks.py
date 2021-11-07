@@ -1,4 +1,4 @@
-import discord
+import disnake
 from typing import Any, Callable, Coroutine, cast
 
 from . import types
@@ -18,7 +18,7 @@ def command_filter(**perms: bool) -> Callable[[types.AnyContext], Coroutine[Any,
             return True
         if ctx.guild and ctx.guild.id == Config.guild_id:
             # allow in guilds, if permissions match
-            user_perms = cast(discord.Member, ctx.author).guild_permissions
+            user_perms = cast(disnake.Member, ctx.author).guild_permissions
             return all(getattr(user_perms, k) == v for k, v in perms.items())
         return False
     return func

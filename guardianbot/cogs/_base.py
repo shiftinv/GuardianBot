@@ -1,12 +1,12 @@
 import json
 import logging
-import discord
+import disnake
 import functools
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict, fields, is_dataclass
 from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
-from discord.ext import commands, tasks
+from disnake.ext import commands, tasks
 
 from .. import error_handler, interactions, multicmd, types
 from ..config import Config
@@ -38,7 +38,7 @@ _TState = TypeVar('_TState')
 class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
     state: _TState
     _bot: types.Bot
-    _guild: discord.Guild = None  # type: ignore  # late init
+    _guild: disnake.Guild = None  # type: ignore  # late init
 
     def __init__(self, bot: types.Bot):
         if not isinstance(bot, interactions.CustomSyncBot):
@@ -101,8 +101,8 @@ _CogT = TypeVar('_CogT', bound=BaseCog[Any])
 _LoopFunc = Callable[[_CogT], Awaitable[None]]
 
 
-def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], types.Loop[_LoopFunc[_CogT]]]:
-    def decorator(f: _LoopFunc[_CogT]) -> types.Loop[_LoopFunc[_CogT]]:
+def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[_LoopFunc[_CogT]]]:
+    def decorator(f: _LoopFunc[_CogT]) -> tasks.Loop[_LoopFunc[_CogT]]:
         @functools.wraps(f)
         async def wrap(self: _CogT) -> None:
             try:

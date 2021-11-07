@@ -2,10 +2,10 @@ import os
 import re
 import sys
 import asyncio
-import discord
+import disnake
 import functools
 import contextlib
-from discord.ext import commands
+from disnake.ext import commands
 from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Awaitable, Iterator, List, TypeVar, Union
 
@@ -33,7 +33,7 @@ def extract_hosts(input: str) -> List[str]:
     return re.findall(r'https?://([^/?#<>\s]+)', input)
 
 
-async def add_checkmark(message: discord.Message) -> None:
+async def add_checkmark(message: disnake.Message) -> None:
     await message.add_reaction('✅')
 
 

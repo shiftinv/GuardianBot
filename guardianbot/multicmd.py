@@ -3,7 +3,7 @@ import types as _types
 
 import inspect
 from dataclasses import dataclass
-from discord.ext import commands
+from disnake.ext import commands
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, cast
 
 from . import types, utils
@@ -116,7 +116,7 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
         for p in sig.parameters.values():
             # if parameter default is disnake's `ParamInfo`,
             # set the value to `ParamInfo.default` instead
-            if isinstance(p.default, types.ParamInfo):
+            if isinstance(p.default, commands.ParamInfo):
                 def_val = p.default.default
                 def_val = p.empty if def_val is ... else def_val
                 new_p.append(p.replace(default=def_val))
