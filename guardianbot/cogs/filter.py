@@ -286,15 +286,15 @@ class FilterCog(BaseCog[State]):
 
     # config stuff
 
-    @filter.subgroup(name='config')
+    @filter._command.group(name='config')
     async def filter_config(self, ctx: types.AnyContext) -> None:
         pass
 
-    @filter_config.subcommand(
+    @filter_config.command(
         name='report_channel',
-        description='Sets/shows the channel to send reports in'
+        help='Sets/shows the channel to send reports in'
     )
-    async def filter_config_report_channel(self, ctx: types.AnyContext, channel: Optional[disnake.TextChannel] = None) -> None:
+    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[disnake.TextChannel] = None) -> None:
         if channel:
             self.state.report_channel = channel.id
             self._write_state()
@@ -302,11 +302,11 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
 
-    @filter_config.subcommand(
+    @filter_config.command(
         name='mute_minutes',
-        description='Sets/shows the number of minutes to mute users sending filtered messages'
+        help='Sets/shows the number of minutes to mute users sending filtered messages'
     )
-    async def filter_config_mute_minutes(self, ctx: types.AnyContext, minutes: Optional[int] = None) -> None:
+    async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int] = None) -> None:
         if minutes:
             self.state.mute_minutes = minutes
             self._write_state()
@@ -314,11 +314,11 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
-    @filter_config.subcommand(
+    @filter_config.command(
         name='unfiltered_roles',
-        description='Adds/removes/shows roles that bypass any filters'
+        help='Adds/removes/shows roles that bypass any filters'
     )
-    async def filter_config_unfiltered_roles(self, ctx: types.AnyContext, role: Optional[disnake.Role] = None) -> None:
+    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[disnake.Role] = None) -> None:
         if role:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
