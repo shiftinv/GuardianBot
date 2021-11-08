@@ -25,6 +25,7 @@ intents.members = True
 
 bot = interactions.CustomSyncBot(
     command_prefix=commands.when_mentioned_or(Config.prefix),
+    activity=disnake.Activity(type=disnake.ActivityType.watching, name='Link(s)'),
     intents=intents,
     test_guilds=[Config.guild_id],
     sync_commands_debug=Config.debug,
@@ -43,8 +44,6 @@ load_ext('.cogs.filter')
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=disnake.Activity(type=disnake.ActivityType.watching, name='Link(s)'))
-
     guild = disnake.utils.get(bot.guilds, id=Config.guild_id)
     assert guild, f'couldn\'t find guild with ID {Config.guild_id}'
     logger.info(
