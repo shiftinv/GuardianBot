@@ -49,13 +49,6 @@ def group(
     return wrap
 
 
-async def send_response(ctx: types.AnyContext, content: Optional[str] = None, **kwargs: Any) -> None:
-    if isinstance(ctx, types.AppCI):
-        await ctx.response.send_message(content, **kwargs)
-    else:
-        await ctx.send(content, **kwargs)
-
-
 #####
 # internal stuff
 

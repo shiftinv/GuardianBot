@@ -2,12 +2,12 @@ import io
 import logging
 import disnake
 from datetime import datetime, timedelta
-from typing import Dict, Literal, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
 from disnake.ext import commands
 
 from ._base import BaseCog, loop_error_handled
-from .. import checks, utils, types
+from .. import checks, multicmd, utils, types
 from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
@@ -15,16 +15,26 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-class FilterChecker(BaseChecker):
-    @classmethod
-    async def convert(self, ctx: types.Context, arg: str) -> BaseChecker:
-        cog = ctx.cog
-        assert isinstance(cog, FilterCog)
-        if arg not in cog.checkers:
-            err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
-            await ctx.send(err)
-            raise utils.suppress_help(commands.BadArgument(err))
-        return cog.checkers[arg]
+async def convert_checker(ctx: types.AnyContext, arg: str) -> BaseChecker:
+    cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
+    assert isinstance(cog, FilterCog)
+    if arg not in cog.checkers:
+        err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
+        await ctx.send(err)
+        raise utils.suppress_help(commands.BadArgument(err))
+    return cog.checkers[arg]
+
+
+async def autocomp_checker(ctx: types.AppCI, arg: str) -> List[str]:
+    cog = ctx.application_command.cog
+    assert isinstance(cog, FilterCog)
+    return [n for n in cog.checkers if n.startswith(arg)]
+
+
+checker_param = commands.Param(
+    # conv=convert_checker,
+    autocomp=autocomp_checker,
+)
 
 
 @dataclass
@@ -175,23 +185,30 @@ class FilterCog(BaseCog[State]):
         assert role
         return role
 
-    @commands.command()
-    async def mute(self, ctx: types.Context, user: disnake.Member, duration: utils.TimedeltaConverter) -> None:
-        await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
-        await utils.add_checkmark(ctx.message)
+    @multicmd.command(
+        description='Mutes a user'
+    )
+    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: str) -> None:
+        duration_td = await utils.convert_timedelta(ctx, duration)
+        await self._mute_user(user, duration_td, f'requested by {str(ctx.author)} ({ctx.author.id})')
+        await ctx.send(f'Muted {str(user)}/{user.id}')
 
-    @commands.command()
-    async def unmute(self, ctx: types.Context, user: disnake.Member) -> None:
+    @multicmd.command(
+        description='Unmutes a user'
+    )
+    async def unmute(self, ctx: types.AnyContext, user: disnake.Member) -> None:
         # remove role from user
         await user.remove_roles(types.to_snowflake(self._get_muted_role()))
 
         # remove user from muted list
         self.state._muted_users.pop(str(user.id), None)
 
-        await utils.add_checkmark(ctx.message)
+        await ctx.send(f'Unmuted {str(user)}/{user.id}')
 
-    @commands.command()
-    async def muted(self, ctx: types.Context) -> None:
+    @multicmd.command(
+        description='Lists all currently muted users'
+    )
+    async def muted(self, ctx: types.AnyContext) -> None:
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
@@ -209,13 +226,16 @@ class FilterCog(BaseCog[State]):
 
     # filter list stuff
 
-    @commands.group()
-    @utils.strict_group
-    async def filter(self, ctx: types.Context) -> None:
+    @multicmd.group()
+    async def filter(self, ctx: types.AnyContext) -> None:
         pass
 
-    @filter.command(name='add')
-    async def filter_add(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
+    @filter.subcommand(
+        name='add',
+        description='Adds an entry to a filter list'
+    )
+    async def filter_add(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         logger.info(f'adding {input} to list')
         res = blocklist.entry_add(input)
         if res is True:
@@ -225,16 +245,24 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'Unable to add `{input}` to list: `{res}`')
 
-    @filter.command(name='remove')
-    async def filter_remove(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
+    @filter.subcommand(
+        name='remove',
+        description='Removes an entry from a filter list'
+    )
+    async def filter_remove(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         logger.info(f'removing {input} from list')
         if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
         else:
             await ctx.send(f'List does not contain `{input}`')
 
-    @filter.command(name='list')
-    async def filter_list(self, ctx: types.Context, blocklist: FilterChecker, raw: Optional[Literal['raw']]) -> None:
+    @filter.subcommand(
+        name='list',
+        description='Shows all entries in a filter list'
+    )
+    async def filter_list(self, ctx: types.AnyContext, blocklist_: str = checker_param, raw: bool = False) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
@@ -242,25 +270,26 @@ class FilterCog(BaseCog[State]):
         items = list(blocklist) if raw else sorted(blocklist)
         s = f'List contains {len(items)} element(s):\n'
 
-        file: Optional[disnake.File]
+        kwargs: Dict[str, Any] = {}
         if len(items) > 20:  # arbitrary line limit for switching to attachments
             name = next(k for k, v in self.checkers.items() if v is blocklist)
-            file = disnake.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
+            kwargs['file'] = disnake.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
         else:
             s += '```\n' + '\n'.join(items) + '\n```'
-            file = None
 
-        await ctx.send(s, file=types.unwrap_opt(file))
+        await ctx.send(s, **kwargs)
 
     # config stuff
 
-    @filter.group(name='config')
-    @utils.strict_group
-    async def filter_config(self, ctx: types.Context) -> None:
+    @filter.subgroup(name='config')
+    async def filter_config(self, ctx: types.AnyContext) -> None:
         pass
 
-    @filter_config.command(name='report_channel')
-    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[disnake.TextChannel]) -> None:
+    @filter_config.subcommand(
+        name='report_channel',
+        description='Sets/shows the channel to send reports in'
+    )
+    async def filter_config_report_channel(self, ctx: types.AnyContext, channel: Optional[disnake.TextChannel] = None) -> None:
         if channel:
             self.state.report_channel = channel.id
             self._write_state()
@@ -268,8 +297,11 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
 
-    @filter_config.command(name='mute_minutes')
-    async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int]) -> None:
+    @filter_config.subcommand(
+        name='mute_minutes',
+        description='Sets/shows the number of minutes to mute users sending filtered messages'
+    )
+    async def filter_config_mute_minutes(self, ctx: types.AnyContext, minutes: Optional[int] = None) -> None:
         if minutes:
             self.state.mute_minutes = minutes
             self._write_state()
@@ -277,8 +309,11 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
-    @filter_config.command(name='unfiltered_roles')
-    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[disnake.Role]) -> None:
+    @filter_config.subcommand(
+        name='unfiltered_roles',
+        description='Adds/removes/shows roles that bypass any filters'
+    )
+    async def filter_config_unfiltered_roles(self, ctx: types.AnyContext, role: Optional[disnake.Role] = None) -> None:
         if role:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
