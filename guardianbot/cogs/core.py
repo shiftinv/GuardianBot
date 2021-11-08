@@ -56,7 +56,7 @@ class CoreCog(BaseCog[None]):
             inline=False
         )
 
-        await multicmd.send_response(ctx, embed=embed)
+        await ctx.send(embed=embed)
 
     @interactions.allow(owner=True)
     @multicmd.command(
@@ -77,8 +77,7 @@ class CoreCog(BaseCog[None]):
     async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
         await channel.send(text)
 
-        await multicmd.send_response(
-            ctx,
+        await ctx.send(
             f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```'
         )
 
