@@ -4,7 +4,6 @@ import logging
 import disnake
 
 from . import checks, interactions, error_handler, types, utils
-from .cogs._base import BaseCog
 from .config import Config
 
 
@@ -53,10 +52,6 @@ async def on_ready():
     )
 
     logger.info(f'Latency: {int(bot.latency * 1000)}ms')
-
-    for cog in bot.cogs.values():
-        if isinstance(cog, BaseCog):
-            cog._guild = guild
 
 
 @bot.event

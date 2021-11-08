@@ -38,7 +38,6 @@ _TState = TypeVar('_TState')
 class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
     state: _TState
     _bot: types.Bot
-    _guild: disnake.Guild = None  # type: ignore  # late init
 
     def __init__(self, bot: types.Bot):
         if not isinstance(bot, interactions.CustomSyncBot):
@@ -79,6 +78,8 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
 
+    # checks
+
     async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
         return await self.cog_any_check(ctx)
 
@@ -95,6 +96,14 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
     # override in subclasses
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return True
+
+    # other stuff
+
+    @property
+    def _guild(self) -> disnake.Guild:
+        guild = self._bot.get_guild(Config.guild_id)
+        assert guild
+        return guild
 
 
 _CogT = TypeVar('_CogT', bound=BaseCog[Any])
