@@ -2,6 +2,7 @@ import sys
 import asyncio
 import logging
 import disnake
+from disnake.ext import commands
 
 from . import checks, interactions, error_handler, types, utils
 from .config import Config
@@ -23,7 +24,7 @@ intents = disnake.Intents.default()
 intents.members = True
 
 bot = interactions.CustomSyncBot(
-    command_prefix=Config.prefix,
+    command_prefix=commands.when_mentioned_or(Config.prefix),
     intents=intents,
     test_guilds=[Config.guild_id],
     sync_commands_debug=Config.debug,
