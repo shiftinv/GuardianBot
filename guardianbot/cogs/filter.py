@@ -6,8 +6,9 @@ from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
 from disnake.ext import commands
 
-from ._base import BaseCog, loop_error_handled
-from .. import checks, multicmd, utils, types
+
+from ._base import BaseCog, loop_error_handled, PermissionDecorator
+from .. import checks, interactions, multicmd, utils, types
 from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
@@ -69,6 +70,10 @@ class FilterCog(BaseCog[State]):
 
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return await checks.manage_messages(ctx)
+
+    @staticmethod
+    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
+        return [interactions.allow_mod], False
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:

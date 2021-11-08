@@ -5,7 +5,7 @@ import functools
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict, fields, is_dataclass
-from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, get_args
 from disnake.ext import commands, tasks
 
 from .. import error_handler, interactions, multicmd, types
@@ -33,9 +33,26 @@ def _custom_decoder(dct: Dict[str, Any]) -> Any:
 
 
 _TState = TypeVar('_TState')
+PermissionDecorator = Callable[[Any], Any]
 
 
-class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
+class _BaseMeta(multicmd._MultiCmdMeta):
+    def __init__(cls: Type['BaseCog'], *args: Any, **kwargs: Any):  # type: ignore
+        super().__init__(*args, **kwargs)  # type: ignore
+        for cmd in cls.__cog_app_commands__:
+            if (
+                isinstance(cmd, commands.InvokableApplicationCommand)
+                and not isinstance(cmd, (commands.SubCommand, commands.SubCommandGroup))
+            ):
+                decorators, default = cls.cog_guild_permissions()
+                if default is not None:
+                    cmd.body.default_permission = default
+                for dec in decorators:
+                    r = dec(cmd)
+                    assert r is cmd
+
+
+class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
     state: _TState
     _bot: types.Bot
 
@@ -96,6 +113,10 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
     # override in subclasses
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return True
+
+    @staticmethod
+    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
+        return [], None
 
     # other stuff
 
