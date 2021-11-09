@@ -11,7 +11,7 @@ class __Config:
     guild_id: int
     data_dir: str
     muted_role_id: Optional[int]
-    mod_role_ids: Optional[List[int]]
+    mod_role_ids: List[int]
     git_commit: Optional[str]
     enable_owner_eval: bool = False
 

@@ -69,10 +69,4 @@ def allow(
     return wrap
 
 
-if Config.mod_role_ids:
-    allow_mod = allow(owner=True, roles=dict.fromkeys(Config.mod_role_ids, True))
-    allow_mod_default = False
-else:
-    # if no mod role IDs are configured, don't override any permissions
-    allow_mod: Callable[[_TCmd], _TCmd] = lambda x: x  # type: ignore[no-redef]  # noqa: E731
-    allow_mod_default = True
+allow_mod = allow(owner=True, roles=dict.fromkeys(Config.mod_role_ids, True))

@@ -71,7 +71,7 @@ class CoreCog(BaseCog[None]):
     @interactions.allow_mod
     @multicmd.command(
         description='Sends a message in another channel using the bot',
-        slash_kwargs=dict(default_permission=interactions.allow_mod_default)
+        slash_kwargs=dict(default_permission=False)
     )
     @commands.check(checks.manage_messages)
     async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
