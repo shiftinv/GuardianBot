@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import types as _types
 
 import inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from disnake.ext import commands
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, cast
 
@@ -129,6 +129,11 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
     def __set_name__(self, owner: Type[commands.Cog], name: str) -> None:
         from .cogs._base import BaseCog  # avoid circular import
         assert issubclass(owner, BaseCog), 'multicmd may only be used in types derived from `BaseCog`'
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        assert name in [f.name for f in fields(self)], \
+            f'cannot set attribute \'{name}\' on multicmd types; make sure you put any checks or similar decorators _below_ the multicmd decorator'
+        return super().__setattr__(name, value)
 
 
 @dataclass
