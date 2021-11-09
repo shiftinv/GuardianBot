@@ -2,12 +2,11 @@ import os
 import re
 import sys
 import asyncio
-import disnake
 import functools
 import contextlib
 from disnake.ext import commands
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator, Awaitable, Iterator, List, TypeVar, Union
+from typing import Any, AsyncIterator, Awaitable, List, TypeVar, Union
 
 from . import types
 
@@ -100,27 +99,10 @@ def debugger_active() -> bool:
     return bool(getattr(sys, 'gettrace', lambda: False)())
 
 
-@contextlib.contextmanager
-def intercept_print_warnings() -> Iterator[None]:
-    class Out:
-        def write(self, message: str) -> None:
-            sys.__stdout__.write(message)
-            if message.startswith('[WARNING]'):
-                raise RuntimeError(message)
-
-    sys.stdout = Out()  # type: ignore
+@contextlib.asynccontextmanager
+async def catch_and_exit(bot: types.Bot) -> AsyncIterator[None]:
     try:
         yield
-    finally:
-        sys.stdout = sys.__stdout__
-
-
-@contextlib.asynccontextmanager
-async def catch_and_exit(bot: types.Bot, *, intercept_warnings: bool = False) -> AsyncIterator[None]:
-    try:
-        ctx = intercept_print_warnings() if intercept_warnings else contextlib.nullcontext()
-        with ctx:
-            yield
     except Exception as e:
         try:
             from . import error_handler

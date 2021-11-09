@@ -1,6 +1,7 @@
 import io
 import sys
 import disnake
+import warnings
 import traceback
 from disnake.ext import commands
 from typing import Any, Optional
@@ -82,3 +83,14 @@ def init(bot: types.Bot) -> None:
     async def on_message_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_message_command_error(inter, exc)
+
+
+# oof
+def init_warnings_handler(bot: types.Bot) -> None:
+    orig_showwarnmsg = warnings._showwarnmsg_impl  # type: ignore
+
+    def new_showwarnmsg(msg: warnings.WarningMessage) -> None:
+        bot.loop.create_task(_handle_error(bot, RuntimeError(msg)))
+        orig_showwarnmsg(msg)
+
+    warnings._showwarnmsg_impl = new_showwarnmsg  # type: ignore

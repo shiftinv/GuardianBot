@@ -7,25 +7,28 @@ from .config import Config
 
 class CustomSyncBot(commands.Bot):
     async def _sync_application_command_permissions(self) -> None:
-        async with utils.catch_and_exit(self, intercept_warnings=True):
-            for command in self.application_commands:
-                # make sure `default_permission` is `False` if custom permissions are set
-                all_perms: List[bool] = []
-                for u in command.permissions.values():
-                    for p in (u.permissions, u.roles, u.users, {None: u.owner} if u.owner is not None else None):
-                        if not p:
-                            continue
-                        all_perms.extend(p.values())
-                if all_perms and all(p is True for p in all_perms):
-                    assert command.body.default_permission is False, \
-                        f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
+        for command in self.application_commands:
+            # make sure `default_permission` is `False` if custom permissions are set
+            all_perms: List[bool] = []
+            for u in command.permissions.values():
+                for p in (u.permissions, u.roles, u.users, {None: u.owner} if u.owner is not None else None):
+                    if not p:
+                        continue
+                    all_perms.extend(p.values())
+            if all_perms and all(p is True for p in all_perms):
+                assert command.body.default_permission is False, \
+                    f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
 
-            # call original func
-            return await super()._sync_application_command_permissions()
+        # call original func
+        return await super()._sync_application_command_permissions()
 
-    async def _sync_application_commands(self) -> None:
-        async with utils.catch_and_exit(self, intercept_warnings=True):
-            return await super()._sync_application_commands()
+    async def _prepare_application_commands(self) -> None:
+        async with utils.catch_and_exit(self):
+            return await super()._prepare_application_commands()
+
+    async def _delayed_command_sync(self) -> None:
+        async with utils.catch_and_exit(self):
+            return await super()._delayed_command_sync()
 
 
 _TCmd = TypeVar(

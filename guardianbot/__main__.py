@@ -80,6 +80,7 @@ bot.application_command_check(slash_commands=True, user_commands=True, message_c
 
 # initialize global error handler
 error_handler.init(bot)
+error_handler.init_warnings_handler(bot)
 
 # connect
 bot.run(Config.token)
