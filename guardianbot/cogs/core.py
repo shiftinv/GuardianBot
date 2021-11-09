@@ -81,6 +81,24 @@ class CoreCog(BaseCog[None]):
             f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```'
         )
 
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def botinvite(self, ctx: types.Context, *scopes: str) -> None:
+        if not scopes:
+            scopes = ('bot', 'applications.commands')
+        link = disnake.utils.oauth_url(
+            self._bot.user.id,
+            permissions=disnake.Permissions(
+                add_reactions=True,
+                read_messages=True,
+                send_messages=True,
+                manage_messages=True,
+                manage_roles=True,
+            ),
+            scopes=scopes,
+        )
+        await ctx.send(link)
+
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()
     async def eval(self, ctx: types.Context, *, code: str) -> None:
