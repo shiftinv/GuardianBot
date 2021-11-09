@@ -103,7 +103,6 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
     async def cog_slash_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
         return await self.cog_any_check(ctx)
 
-    # TODO: test user/message command checks
     async def cog_user_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
         return await self.cog_any_check(ctx)
 

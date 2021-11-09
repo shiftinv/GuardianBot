@@ -63,14 +63,27 @@ async def on_command(ctx: types.Context) -> None:
     )
 
 
-# TODO: add other (user/message) command events
-@bot.event
-async def on_slash_command(ctx: types.AppCI) -> None:
+async def _on_app_cmd(ctx: types.AppCI, type: str) -> None:
     logger.debug(
         f'{str(ctx.author)}/{ctx.author.id} invoked '
-        f'slash command \'/{ctx.application_command.qualified_name} {ctx.filled_options}\' '
+        f'{type} command \'{ctx.application_command.qualified_name} {ctx.filled_options}\' '
         f'in \'{ctx.channel}\''
     )
+
+
+@bot.event
+async def on_slash_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'slash')
+
+
+@bot.event
+async def on_user_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'user')
+
+
+@bot.event
+async def on_message_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'message')
 
 
 # add global command checks
