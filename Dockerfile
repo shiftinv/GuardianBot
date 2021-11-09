@@ -6,6 +6,9 @@ RUN adduser -DH app \
  && chown -R app:app /app
 WORKDIR /app
 
+# fix print() output in container logs
+ENV PYTHONUNBUFFERED=1
+
 # install dependencies
 COPY requirements.txt .
 RUN apk add --no-cache --virtual build-dep git build-base libffi-dev \
