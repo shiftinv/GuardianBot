@@ -45,7 +45,7 @@ class State:
     unfiltered_roles: Set[int] = field(default_factory=set)
 
     # using str instead of int since json only supports string keys
-    _muted_users: Dict[str, datetime] = field(default_factory=dict)
+    _muted_users: Dict[str, Optional[datetime]] = field(default_factory=dict)
 
 
 class FilterCog(BaseCog[State]):
@@ -80,7 +80,7 @@ class FilterCog(BaseCog[State]):
         role = self._get_muted_role()
 
         for user_id, expiry in self.state._muted_users.copy().items():
-            if expiry < utils.utcnow():
+            if expiry and expiry < utils.utcnow():
                 logger.info(f'unmuting {user_id}')
 
                 member = self._guild.get_member(int(user_id))
@@ -134,7 +134,11 @@ class FilterCog(BaseCog[State]):
         # mute user
         mute = Config.muted_role_id is not None
         if mute:
-            await self._mute_user(author, timedelta(minutes=self.state.mute_minutes), reason)
+            await self._mute_user(
+                author,
+                timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
+                reason
+            )
 
         # send notification to channel
         if self.state.report_channel:
@@ -163,7 +167,7 @@ class FilterCog(BaseCog[State]):
                 name='Reason',
                 value=reason
             )
-            if mute:
+            if mute and self.state.mute_minutes:
                 embed.add_field(
                     name='Duration',
                     value=f'{self.state.mute_minutes}min'
@@ -174,11 +178,11 @@ class FilterCog(BaseCog[State]):
 
         logger.info(f'successfully blocked message {message.id}')
 
-    async def _mute_user(self, user: disnake.Member, duration: timedelta, reason: Optional[str]) -> None:
+    async def _mute_user(self, user: disnake.Member, duration: Optional[timedelta], reason: Optional[str]) -> None:
         role = self._get_muted_role()
 
         await user.add_roles(types.to_snowflake(role), reason=reason)
-        self.state._muted_users[str(user.id)] = utils.utcnow() + duration
+        self.state._muted_users[str(user.id)] = (utils.utcnow() + duration) if duration else None
         self._write_state()
 
         # sanity check to make sure task wasn't stopped for some reason
@@ -193,8 +197,8 @@ class FilterCog(BaseCog[State]):
     @multicmd.command(
         description='Mutes a user'
     )
-    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: str) -> None:
-        duration_td = await utils.convert_timedelta(ctx, duration)
+    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: Optional[str] = None) -> None:
+        duration_td = await utils.convert_timedelta(ctx, duration) if duration else None
         await self._mute_user(user, duration_td, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await ctx.send(f'Muted {str(user)}/{user.id}')
 
@@ -217,7 +221,7 @@ class FilterCog(BaseCog[State]):
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
-                f'<@!{id}>: {disnake.utils.format_dt(expiry)}'
+                f'<@!{id}>: {disnake.utils.format_dt(expiry) if expiry else "-"}'
                 for id, expiry in self.state._muted_users.items()
             )
         else:
@@ -295,7 +299,7 @@ class FilterCog(BaseCog[State]):
         help='Sets/shows the channel to send reports in'
     )
     async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[disnake.TextChannel] = None) -> None:
-        if channel:
+        if channel is not None:
             self.state.report_channel = channel.id
             self._write_state()
             await ctx.send(f'Set channel to {channel.id}')
@@ -304,10 +308,10 @@ class FilterCog(BaseCog[State]):
 
     @filter_config.command(
         name='mute_minutes',
-        help='Sets/shows the number of minutes to mute users sending filtered messages'
+        help='Sets/shows the number of minutes to mute users sending filtered messages; set to 0 to mute permanently'
     )
     async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int] = None) -> None:
-        if minutes:
+        if minutes is not None:
             self.state.mute_minutes = minutes
             self._write_state()
             await ctx.send(f'Set mute duration to {minutes}min')
@@ -319,7 +323,7 @@ class FilterCog(BaseCog[State]):
         help='Adds/removes/shows roles that bypass any filters'
     )
     async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[disnake.Role] = None) -> None:
-        if role:
+        if role is not None:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
                 self._write_state()
