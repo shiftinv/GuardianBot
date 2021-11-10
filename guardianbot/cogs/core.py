@@ -99,6 +99,11 @@ class CoreCog(BaseCog[None]):
         )
         await ctx.send(link)
 
+    @multicmd.command()
+    async def snowflaketime(self, ctx: types.AnyContext, snowflake: str) -> None:
+        time = disnake.utils.snowflake_time(int(snowflake))
+        await ctx.send(str(time))
+
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()
     async def eval(self, ctx: types.Context, *, code: str) -> None:
