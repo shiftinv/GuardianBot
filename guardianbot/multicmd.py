@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-import types as _types
-
 import inspect
 from dataclasses import dataclass, fields
 from disnake.ext import commands
@@ -82,7 +79,23 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
         _cls = cast(Type[_MultiBase[_TCmd, _TSlashCmd]], cls)  # typing generic classmethods and return types correctly is basically impossible
 
         # use slash command's `Param` defaults as classic command's defaults as well
-        cmd_func = _cls.__replace_defaults(func)
+        def replace_defaults(p: inspect.Parameter) -> Dict[str, Any]:
+            # if parameter default is disnake's `ParamInfo`,
+            # set the value to `ParamInfo.default` instead
+            if isinstance(p.default, commands.ParamInfo):
+                def_val = p.default.default
+                return {'default': p.empty if def_val is ... else def_val}
+            return {}
+
+        cmd_func = utils.patch_parameters(func, replace_defaults)
+
+        # fix annotation for interaction parameter
+        def replace_inter_annotation(p: inspect.Parameter) -> Dict[str, Any]:
+            if p.annotation is types.AnyContext:
+                return {'annotation': types.AppCI}
+            return {}
+
+        slash_func = utils.patch_parameters(func, replace_inter_annotation)
 
         # create new instance with classic command and slash command
         inst = _cls(
@@ -95,35 +108,9 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
                 name=name,
                 description=description,
                 **(slash_kwargs or {})
-            )(func)
+            )(slash_func)
         )
         return cast(_T, inst)
-
-    @staticmethod
-    def __replace_defaults(func: types.HandlerType) -> types.HandlerType:
-        # (this is a terrible hack, nothing to see here, move along)
-
-        # build new signature
-        sig = inspect.signature(func)
-        new_p = []
-        for p in sig.parameters.values():
-            # if parameter default is disnake's `ParamInfo`,
-            # set the value to `ParamInfo.default` instead
-            if isinstance(p.default, commands.ParamInfo):
-                def_val = p.default.default
-                def_val = p.empty if def_val is ... else def_val
-                new_p.append(p.replace(default=def_val))
-            else:
-                new_p.append(p.replace())  # create a copy
-        sig = sig.replace(parameters=new_p)
-
-        # copy function
-        new_func = _types.FunctionType(func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__)  # type: ignore[attr-defined]
-        new_func.__dict__.update(func.__dict__)
-
-        # set signature
-        new_func.__signature__ = sig  # type: ignore[attr-defined]
-        return new_func
 
     # (ab)using __set_name__ for sanity checks
     def __set_name__(self, owner: Type[commands.Cog], name: str) -> None:

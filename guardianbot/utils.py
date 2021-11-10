@@ -1,12 +1,15 @@
+import types as _types
+
 import os
 import re
 import sys
 import asyncio
+import inspect
 import functools
 import contextlib
 from disnake.ext import commands
 from datetime import datetime, timedelta, timezone
-from typing import Any, AsyncIterator, Awaitable, List, TypeVar, Union
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, TypeVar, Union
 
 from . import types
 
@@ -109,3 +112,22 @@ async def catch_and_exit(bot: types.Bot) -> AsyncIterator[None]:
             await error_handler.handle_task_error(bot, e)
         finally:
             sys.exit(1)
+
+
+TCallable = TypeVar('TCallable', bound=Callable[..., Any])
+
+
+def copy_patch_signature(func: TCallable, sig: inspect.Signature) -> TCallable:
+    # copy function
+    new_func = _types.FunctionType(func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__)  # type: ignore[attr-defined]
+    new_func.__dict__.update(func.__dict__)
+
+    # set signature
+    new_func.__signature__ = sig  # type: ignore[attr-defined]
+    return new_func  # type: ignore
+
+
+def patch_parameters(func: TCallable, map_func: Callable[[inspect.Parameter], Dict[str, Any]]) -> TCallable:
+    sig = inspect.signature(func)
+    new_p = [p.replace(**map_func(p)) for p in sig.parameters.values()]
+    return copy_patch_signature(func, sig.replace(parameters=new_p))
