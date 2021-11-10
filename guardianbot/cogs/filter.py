@@ -1,4 +1,5 @@
 import io
+import asyncio
 import logging
 import disnake
 from datetime import datetime, timedelta
@@ -128,17 +129,19 @@ class FilterCog(BaseCog[State]):
         author = cast(disnake.Member, message.author)
         logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
+        tasks = []
         # delete message
-        await message.delete()
+        tasks.append(message.delete())
 
         # mute user
         mute = Config.muted_role_id is not None
         if mute:
-            await self._mute_user(
+            tasks.append(self._mute_user(
                 author,
                 timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
                 reason
-            )
+            ))
+        await asyncio.gather(*tasks)
 
         # send notification to channel
         if self.state.report_channel:
