@@ -1,15 +1,14 @@
 import json
 import logging
-import discord
+import disnake
 import functools
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict, fields, is_dataclass
-from typing import Any, Awaitable, Callable, Dict, Generic, TypeVar, get_args
-from discord.ext import commands, tasks
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, get_args
+from disnake.ext import commands, tasks
 
-
-from .. import error_handler, types
+from .. import error_handler, interactions, multicmd, types
 from ..config import Config
 
 
@@ -34,14 +33,32 @@ def _custom_decoder(dct: Dict[str, Any]) -> Any:
 
 
 _TState = TypeVar('_TState')
+PermissionDecorator = Callable[[Any], Any]
 
 
-class BaseCog(Generic[_TState], commands.Cog):
+class _BaseMeta(multicmd._MultiCmdMeta):
+    def __init__(cls: Type['BaseCog'], *args: Any, **kwargs: Any):  # type: ignore
+        super().__init__(*args, **kwargs)  # type: ignore
+        for cmd in cls.__cog_app_commands__:
+            if (
+                isinstance(cmd, commands.InvokableApplicationCommand)
+                and not isinstance(cmd, (commands.SubCommand, commands.SubCommandGroup))
+            ):
+                decorators, default = cls.cog_guild_permissions()
+                if default is not None:
+                    cmd.body.default_permission = default
+                for dec in decorators:
+                    r = dec(cmd)
+                    assert r is cmd
+
+
+class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
     state: _TState
     _bot: types.Bot
-    _guild: discord.Guild = None  # type: ignore  # late init
 
     def __init__(self, bot: types.Bot):
+        if not isinstance(bot, interactions.CustomSyncBot):
+            raise TypeError('expected bot to be (a subclass of) `interactions.CustomSyncBot`')
         self._bot = bot
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
@@ -78,13 +95,43 @@ class BaseCog(Generic[_TState], commands.Cog):
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
         self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
 
+    # checks
+
+    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    async def cog_slash_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    async def cog_user_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    async def cog_message_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
+        return await self.cog_any_check(ctx)
+
+    # override in subclasses
+    async def cog_any_check(self, ctx: types.AnyContext) -> bool:
+        return True
+
+    @staticmethod
+    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
+        return [], None
+
+    # other stuff
+
+    @property
+    def _guild(self) -> disnake.Guild:
+        guild = self._bot.get_guild(Config.guild_id)
+        assert guild
+        return guild
+
 
 _CogT = TypeVar('_CogT', bound=BaseCog[Any])
 _LoopFunc = Callable[[_CogT], Awaitable[None]]
 
 
-def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], types.Loop[_LoopFunc[_CogT]]]:
-    def decorator(f: _LoopFunc[_CogT]) -> types.Loop[_LoopFunc[_CogT]]:
+def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[_LoopFunc[_CogT]]]:
+    def decorator(f: _LoopFunc[_CogT]) -> tasks.Loop[_LoopFunc[_CogT]]:
         @functools.wraps(f)
         async def wrap(self: _CogT) -> None:
             try:

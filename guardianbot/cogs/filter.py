@@ -1,13 +1,15 @@
 import io
+import asyncio
 import logging
-import discord
+import disnake
 from datetime import datetime, timedelta
-from typing import Dict, Literal, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 from dataclasses import dataclass, field
-from discord.ext import commands
+from disnake.ext import commands
 
-from ._base import BaseCog, loop_error_handled
-from .. import checks, utils, types
+
+from ._base import BaseCog, loop_error_handled, PermissionDecorator
+from .. import checks, interactions, multicmd, utils, types
 from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
@@ -15,16 +17,26 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-class FilterChecker(BaseChecker):
-    @classmethod
-    async def convert(self, ctx: types.Context, arg: str) -> BaseChecker:
-        cog = ctx.cog
-        assert isinstance(cog, FilterCog)
-        if arg not in cog.checkers:
-            err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
-            await ctx.send(err)
-            raise utils.suppress_help(commands.BadArgument(err))
-        return cog.checkers[arg]
+async def convert_checker(ctx: types.AnyContext, arg: str) -> BaseChecker:
+    cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
+    assert isinstance(cog, FilterCog)
+    if arg not in cog.checkers:
+        err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
+        await ctx.send(err)
+        raise utils.suppress_help(commands.BadArgument(err))
+    return cog.checkers[arg]
+
+
+async def autocomp_checker(ctx: types.AppCI, arg: str) -> List[str]:
+    cog = ctx.application_command.cog
+    assert isinstance(cog, FilterCog)
+    return [n for n in cog.checkers if n.startswith(arg)]
+
+
+checker_param = commands.Param(
+    # conv=convert_checker,
+    autocomp=autocomp_checker,
+)
 
 
 @dataclass
@@ -34,7 +46,7 @@ class State:
     unfiltered_roles: Set[int] = field(default_factory=set)
 
     # using str instead of int since json only supports string keys
-    _muted_users: Dict[str, datetime] = field(default_factory=dict)
+    _muted_users: Dict[str, Optional[datetime]] = field(default_factory=dict)
 
 
 class FilterCog(BaseCog[State]):
@@ -57,15 +69,19 @@ class FilterCog(BaseCog[State]):
         logger.debug('stopping unmute loop')
         self._unmute_expired.stop()
 
-    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
+    async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return await checks.manage_messages(ctx)
+
+    @staticmethod
+    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
+        return [interactions.allow_mod], False
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:
         role = self._get_muted_role()
 
         for user_id, expiry in self.state._muted_users.copy().items():
-            if expiry < utils.utcnow():
+            if expiry and expiry < utils.utcnow():
                 logger.info(f'unmuting {user_id}')
 
                 member = self._guild.get_member(int(user_id))
@@ -77,7 +93,7 @@ class FilterCog(BaseCog[State]):
                 self._write_state()
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         check, check_reason = await self._should_check(message)
         if not check:
             logger.info(f'ignoring message {message.id} by {message.author} ({check_reason})')
@@ -88,7 +104,7 @@ class FilterCog(BaseCog[State]):
                 await self._handle_blocked(message, filter_reason)
                 break
 
-    async def _should_check(self, message: discord.Message) -> Tuple[bool, str]:
+    async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
         if not message.guild:
             return False, 'DM'
         assert message.guild.id == Config.guild_id
@@ -102,29 +118,35 @@ class FilterCog(BaseCog[State]):
             return False, 'command'
 
         if any(
-            discord.utils.get(cast(discord.Member, message.author).roles, id=role_id)
+            disnake.utils.get(cast(disnake.Member, message.author).roles, id=role_id)
             for role_id in self.state.unfiltered_roles
         ):
             return False, 'user with unfiltered role'
 
         return True, ''
 
-    async def _handle_blocked(self, message: discord.Message, reason: str) -> None:
-        author = cast(discord.Member, message.author)
+    async def _handle_blocked(self, message: disnake.Message, reason: str) -> None:
+        author = cast(disnake.Member, message.author)
         logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
+        tasks = []
         # delete message
-        await message.delete()
+        tasks.append(message.delete())
 
         # mute user
         mute = Config.muted_role_id is not None
         if mute:
-            await self._mute_user(author, timedelta(minutes=self.state.mute_minutes), reason)
+            tasks.append(self._mute_user(
+                author,
+                timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
+                reason
+            ))
+        await asyncio.gather(*tasks)
 
         # send notification to channel
         if self.state.report_channel:
             prefix = 'Muted' if mute else 'Blocked message by'
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 color=0x992e22,
                 description=author.mention,
                 timestamp=utils.utcnow()
@@ -140,7 +162,7 @@ class FilterCog(BaseCog[State]):
             )
             embed.add_field(
                 name='Channel',
-                value=cast(discord.TextChannel, message.channel).mention,
+                value=cast(disnake.TextChannel, message.channel).mention,
                 inline=False
             )
 
@@ -148,60 +170,67 @@ class FilterCog(BaseCog[State]):
                 name='Reason',
                 value=reason
             )
-            if mute:
+            if mute and self.state.mute_minutes:
                 embed.add_field(
                     name='Duration',
                     value=f'{self.state.mute_minutes}min'
                 )
 
-            report_channel = cast(discord.TextChannel, self._bot.get_channel(self.state.report_channel))
+            report_channel = cast(disnake.TextChannel, self._bot.get_channel(self.state.report_channel))
             await report_channel.send(embed=embed)
 
         logger.info(f'successfully blocked message {message.id}')
 
-    async def _mute_user(self, user: discord.Member, duration: timedelta, reason: Optional[str]) -> None:
+    async def _mute_user(self, user: disnake.Member, duration: Optional[timedelta], reason: Optional[str]) -> None:
         role = self._get_muted_role()
 
         await user.add_roles(types.to_snowflake(role), reason=reason)
-        self.state._muted_users[str(user.id)] = utils.utcnow() + duration
+        self.state._muted_users[str(user.id)] = (utils.utcnow() + duration) if duration else None
         self._write_state()
 
         # sanity check to make sure task wasn't stopped for some reason
         assert self._unmute_expired.is_running()
 
-    def _get_muted_role(self) -> discord.Role:
+    def _get_muted_role(self) -> disnake.Role:
         assert Config.muted_role_id
         role = self._guild.get_role(Config.muted_role_id)
         assert role
         return role
 
-    @commands.command()
-    async def mute(self, ctx: types.Context, user: discord.Member, duration: utils.TimedeltaConverter) -> None:
-        await self._mute_user(user, duration, f'requested by {str(ctx.author)} ({ctx.author.id})')
-        await utils.add_checkmark(ctx.message)
+    @multicmd.command(
+        description='Mutes a user'
+    )
+    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: Optional[str] = None) -> None:
+        duration_td = await utils.convert_timedelta(ctx, duration) if duration else None
+        await self._mute_user(user, duration_td, f'requested by {str(ctx.author)} ({ctx.author.id})')
+        await ctx.send(f'Muted {str(user)}/{user.id}')
 
-    @commands.command()
-    async def unmute(self, ctx: types.Context, user: discord.Member) -> None:
+    @multicmd.command(
+        description='Unmutes a user'
+    )
+    async def unmute(self, ctx: types.AnyContext, user: disnake.Member) -> None:
         # remove role from user
         await user.remove_roles(types.to_snowflake(self._get_muted_role()))
 
         # remove user from muted list
         self.state._muted_users.pop(str(user.id), None)
 
-        await utils.add_checkmark(ctx.message)
+        await ctx.send(f'Unmuted {str(user)}/{user.id}')
 
-    @commands.command()
-    async def muted(self, ctx: types.Context) -> None:
+    @multicmd.command(
+        description='Lists all currently muted users'
+    )
+    async def muted(self, ctx: types.AnyContext) -> None:
         if self.state._muted_users:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
-                f'<@!{id}>: {discord.utils.format_dt(expiry)}'
+                f'<@!{id}>: {disnake.utils.format_dt(expiry) if expiry else "-"}'
                 for id, expiry in self.state._muted_users.items()
             )
         else:
             desc = 'none'
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title='Currently muted users',
             description=desc
         )
@@ -209,13 +238,16 @@ class FilterCog(BaseCog[State]):
 
     # filter list stuff
 
-    @commands.group()
-    @utils.strict_group
-    async def filter(self, ctx: types.Context) -> None:
+    @multicmd.group()
+    async def filter(self, ctx: types.AnyContext) -> None:
         pass
 
-    @filter.command(name='add')
-    async def filter_add(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
+    @filter.subcommand(
+        name='add',
+        description='Adds an entry to a filter list'
+    )
+    async def filter_add(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         logger.info(f'adding {input} to list')
         res = blocklist.entry_add(input)
         if res is True:
@@ -225,16 +257,24 @@ class FilterCog(BaseCog[State]):
         else:
             await ctx.send(f'Unable to add `{input}` to list: `{res}`')
 
-    @filter.command(name='remove')
-    async def filter_remove(self, ctx: types.Context, blocklist: FilterChecker, input: str) -> None:
+    @filter.subcommand(
+        name='remove',
+        description='Removes an entry from a filter list'
+    )
+    async def filter_remove(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         logger.info(f'removing {input} from list')
         if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
         else:
             await ctx.send(f'List does not contain `{input}`')
 
-    @filter.command(name='list')
-    async def filter_list(self, ctx: types.Context, blocklist: FilterChecker, raw: Optional[Literal['raw']]) -> None:
+    @filter.subcommand(
+        name='list',
+        description='Shows all entries in a filter list'
+    )
+    async def filter_list(self, ctx: types.AnyContext, blocklist_: str = checker_param, raw: bool = False) -> None:
+        blocklist = await convert_checker(ctx, blocklist_)
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return
@@ -242,44 +282,51 @@ class FilterCog(BaseCog[State]):
         items = list(blocklist) if raw else sorted(blocklist)
         s = f'List contains {len(items)} element(s):\n'
 
-        file: Optional[discord.File]
+        kwargs: Dict[str, Any] = {}
         if len(items) > 20:  # arbitrary line limit for switching to attachments
             name = next(k for k, v in self.checkers.items() if v is blocklist)
-            file = discord.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
+            kwargs['file'] = disnake.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
         else:
             s += '```\n' + '\n'.join(items) + '\n```'
-            file = None
 
-        await ctx.send(s, file=types.unwrap_opt(file))
+        await ctx.send(s, **kwargs)
 
     # config stuff
 
-    @filter.group(name='config')
-    @utils.strict_group
-    async def filter_config(self, ctx: types.Context) -> None:
+    @filter._command.group(name='config')
+    async def filter_config(self, ctx: types.AnyContext) -> None:
         pass
 
-    @filter_config.command(name='report_channel')
-    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[discord.TextChannel]) -> None:
-        if channel:
+    @filter_config.command(
+        name='report_channel',
+        help='Sets/shows the channel to send reports in'
+    )
+    async def filter_config_report_channel(self, ctx: types.Context, channel: Optional[disnake.TextChannel] = None) -> None:
+        if channel is not None:
             self.state.report_channel = channel.id
             self._write_state()
             await ctx.send(f'Set channel to {channel.id}')
         else:
             await ctx.send(f'```\nreport_channel = {self.state.report_channel}\n```')
 
-    @filter_config.command(name='mute_minutes')
-    async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int]) -> None:
-        if minutes:
+    @filter_config.command(
+        name='mute_minutes',
+        help='Sets/shows the number of minutes to mute users sending filtered messages; set to 0 to mute permanently'
+    )
+    async def filter_config_mute_minutes(self, ctx: types.Context, minutes: Optional[int] = None) -> None:
+        if minutes is not None:
             self.state.mute_minutes = minutes
             self._write_state()
             await ctx.send(f'Set mute duration to {minutes}min')
         else:
             await ctx.send(f'```\nmute_minutes = {self.state.mute_minutes}\n```')
 
-    @filter_config.command(name='unfiltered_roles')
-    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[discord.Role]) -> None:
-        if role:
+    @filter_config.command(
+        name='unfiltered_roles',
+        help='Adds/removes/shows roles that bypass any filters'
+    )
+    async def filter_config_unfiltered_roles(self, ctx: types.Context, role: Optional[disnake.Role] = None) -> None:
+        if role is not None:
             if role.id in self.state.unfiltered_roles:
                 self.state.unfiltered_roles.remove(role.id)
                 self._write_state()
@@ -294,3 +341,7 @@ class FilterCog(BaseCog[State]):
                 for role_id in self.state.unfiltered_roles
             )
             await ctx.send(f'```\nunfiltered_roles = {{{roles}}}\n```')
+
+
+def setup(bot: types.Bot) -> None:
+    bot.add_cog(FilterCog(bot))

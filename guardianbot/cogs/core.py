@@ -1,17 +1,16 @@
-import os
 import sys
 import pprint
-import discord
+import disnake
 import logging
 import humanize
 import textwrap
 import traceback
 from datetime import datetime
-from discord.ext import commands
+from disnake.ext import commands
 from typing import Any, Dict, Optional
 
 from ._base import BaseCog
-from .. import checks, utils, types
+from .. import checks, interactions, multicmd, utils, types
 from ..config import Config
 
 
@@ -25,9 +24,11 @@ class CoreCog(BaseCog[None]):
     async def on_ready(self) -> None:
         self._start_time = utils.utcnow()
 
-    @commands.command()
-    async def info(self, ctx: types.Context) -> None:
-        embed = discord.Embed()
+    @multicmd.command(
+        description='Shows information about the bot'
+    )
+    async def info(self, ctx: types.AnyContext) -> None:
+        embed = disnake.Embed()
 
         if Config.git_commit:
             embed.add_field(
@@ -36,7 +37,7 @@ class CoreCog(BaseCog[None]):
             )
         embed.add_field(
             name='discord.py',
-            value=discord.__version__
+            value=disnake.__version__
         )
         embed.add_field(
             name='Python',
@@ -57,15 +58,51 @@ class CoreCog(BaseCog[None]):
 
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=(['restart'] if os.path.exists('/.dockerenv') else []))
+    @interactions.allow(owner=True)
+    @multicmd.command(
+        name='restart' if utils.is_docker() else 'shutdown',
+        description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot',
+        slash_kwargs=dict(default_permission=False)
+    )
     @commands.is_owner()
-    async def shutdown(self, ctx: types.Context) -> None:
+    async def shutdown(self, ctx: types.AnyContext) -> None:
         await self._bot.close()
 
-    @commands.command()
+    @interactions.allow_mod
+    @multicmd.command(
+        description='Sends a message in another channel using the bot',
+        slash_kwargs=dict(default_permission=False)
+    )
     @commands.check(checks.manage_messages)
-    async def say(self, ctx: types.Context, channel: discord.TextChannel, *, text: str) -> None:
+    async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
         await channel.send(text)
+
+        await ctx.send(
+            f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```'
+        )
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def botinvite(self, ctx: types.Context, *scopes: str) -> None:
+        if not scopes:
+            scopes = ('bot', 'applications.commands')
+        link = disnake.utils.oauth_url(
+            self._bot.user.id,
+            permissions=disnake.Permissions(
+                add_reactions=True,
+                read_messages=True,
+                send_messages=True,
+                manage_messages=True,
+                manage_roles=True,
+            ),
+            scopes=scopes,
+        )
+        await ctx.send(link)
+
+    @multicmd.command()
+    async def snowflaketime(self, ctx: types.AnyContext, snowflake: str) -> None:
+        time = disnake.utils.snowflake_time(int(snowflake))
+        await ctx.send(str(time))
 
     @commands.command(hidden=True, enabled=Config.enable_owner_eval)
     @commands.is_owner()
@@ -86,8 +123,11 @@ class CoreCog(BaseCog[None]):
 
         # set global context
         eval_globals = {
-            'discord': discord,
-            'ctx': ctx
+            'discord': disnake,
+            'disnake': disnake,
+            'ctx': ctx,
+            'bot': self._bot,
+            'Config': Config,
         }
 
         code = f'async def _func():\n{textwrap.indent(code, "    ")}'
@@ -96,7 +136,7 @@ class CoreCog(BaseCog[None]):
             loc: Dict[str, Any] = {}
             exec(code, eval_globals, loc)
             result = await loc['_func']()
-            await ctx.send(f'```\n{discord.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```')
+            await ctx.send(f'```\n{disnake.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```')
         except Exception as e:
             logger.exception('failed evaluating code')
 
@@ -112,5 +152,9 @@ class CoreCog(BaseCog[None]):
 
             await ctx.send(
                 f'Something went wrong{line}:\n'
-                f'```\n{type(e).__name__}: {discord.utils.escape_mentions(str(e))}\n```'
+                f'```\n{type(e).__name__}: {disnake.utils.escape_mentions(str(e))}\n```'
             )
+
+
+def setup(bot: types.Bot) -> None:
+    bot.add_cog(CoreCog(bot))

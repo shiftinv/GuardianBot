@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, MISSING
-from typing import Optional, Union, get_args, get_origin
+from typing import List, Optional, Union, get_args, get_origin
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,7 @@ class __Config:
     guild_id: int
     data_dir: str
     muted_role_id: Optional[int]
+    mod_role_ids: List[int]
     git_commit: Optional[str]
     enable_owner_eval: bool = False
 

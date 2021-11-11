@@ -1,10 +1,10 @@
 import sys
 import asyncio
 import logging
-import discord
+import disnake
+from disnake.ext import commands
 
-from . import checks, cogs, error_handler, types
-from .cogs._base import BaseCog
+from . import checks, interactions, error_handler, types, utils
 from .config import Config
 
 
@@ -20,23 +20,31 @@ logger = logging.getLogger('guardianbot')
 logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 
 
-intents = discord.Intents.default()
+intents = disnake.Intents.default()
 intents.members = True
 
-bot = types.Bot(
-    command_prefix=Config.prefix,
-    intents=intents
+bot = interactions.CustomSyncBot(
+    command_prefix=commands.when_mentioned_or(Config.prefix),
+    activity=disnake.Activity(type=disnake.ActivityType.watching, name='Link(s)'),
+    intents=intents,
+    test_guilds=[Config.guild_id],
+    sync_commands_debug=Config.debug,
+    sync_permissions=True,
+    reload=utils.debugger_active(),
 )
 
-bot.add_cog(cogs.CoreCog(bot))
-bot.add_cog(cogs.FilterCog(bot))
+
+def load_ext(name: str) -> None:
+    bot.load_extension(name, package=__package__)
+
+
+load_ext('.cogs.core')
+load_ext('.cogs.filter')
 
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='Link(s)'))
-
-    guild = discord.utils.get(bot.guilds, id=Config.guild_id)
+    guild = disnake.utils.get(bot.guilds, id=Config.guild_id)
     assert guild, f'couldn\'t find guild with ID {Config.guild_id}'
     logger.info(
         f'{bot.user} is connected to the following guild:\n'
@@ -45,16 +53,47 @@ async def on_ready():
 
     logger.info(f'Latency: {int(bot.latency * 1000)}ms')
 
-    for cog in bot.cogs.values():
-        if isinstance(cog, BaseCog):
-            cog._guild = guild
+
+@bot.event
+async def on_command(ctx: types.Context) -> None:
+    logger.debug(
+        f'{str(ctx.author)}/{ctx.author.id} invoked '
+        f'command \'{ctx.message.content}\' '
+        f'in \'{ctx.channel}\''
+    )
+
+
+async def _on_app_cmd(ctx: types.AppCI, type: str) -> None:
+    logger.debug(
+        f'{str(ctx.author)}/{ctx.author.id} invoked '
+        f'{type} command \'{ctx.application_command.qualified_name} {ctx.filled_options}\' '
+        f'in \'{ctx.channel}\''
+    )
+
+
+@bot.event
+async def on_slash_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'slash')
+
+
+@bot.event
+async def on_user_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'user')
+
+
+@bot.event
+async def on_message_command(ctx: types.AppCI) -> None:
+    await _on_app_cmd(ctx, 'message')
 
 
 # add global command checks
-bot.check(checks.command_filter())
+cmd_filter = checks.command_filter()
+bot.check(cmd_filter)
+bot.application_command_check(slash_commands=True, user_commands=True, message_commands=True)(cmd_filter)
 
 # initialize global error handler
 error_handler.init(bot)
+error_handler.init_warnings_handler(bot)
 
 # connect
 bot.run(Config.token)

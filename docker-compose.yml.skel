@@ -10,6 +10,7 @@ services:
       DISCORD_TOKEN: '<EMPTY>'
       DISCORD_GUILD_ID: '<EMPTY>'
       DISCORD_MUTED_ROLE_ID: '<EMPTY>'
+      DISCORD_MOD_ROLE_IDS: '<EMPTY>,<EMPTY>,...'
       # DISCORD_ENABLE_OWNER_EVAL: '1'
     volumes:
       - './_data:/app/data'
