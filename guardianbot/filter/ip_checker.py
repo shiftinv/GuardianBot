@@ -6,14 +6,14 @@ import itertools
 from ipaddress import IPv4Address, IPv4Network
 from typing import Dict, List, Optional, Set, Union, cast
 
-from ._base import BaseChecker
+from ._base import ManualBaseChecker
 from .. import utils
 
 
 logger = logging.getLogger(__name__)
 
 
-class IPChecker(BaseChecker):
+class IPChecker(ManualBaseChecker):
     def __init__(self):
         self._resolver = aiodns.DNSResolver(['1.1.1.1'])
 

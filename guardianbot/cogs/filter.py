@@ -3,40 +3,42 @@ import asyncio
 import logging
 import disnake
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 from dataclasses import dataclass, field
 from disnake.ext import commands
 
 
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
 from .. import checks, interactions, multicmd, utils, types
-from ..filter import BaseChecker, IPChecker, ListChecker, RegexChecker
+from ..filter import BaseChecker, ManualBaseChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
 
 logger = logging.getLogger(__name__)
 
 
-async def convert_checker(ctx: types.AnyContext, arg: str) -> BaseChecker:
-    cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
-    assert isinstance(cog, FilterCog)
-    if arg not in cog.checkers:
-        err = f'Invalid argument. Valid choices: {list(cog.checkers.keys())}'
-        await ctx.send(err)
-        raise utils.suppress_help(commands.BadArgument(err))
-    return cog.checkers[arg]
+_TChecker = TypeVar('_TChecker', bound=BaseChecker)
 
 
-async def autocomp_checker(ctx: types.AppCI, arg: str) -> List[str]:
-    cog = ctx.application_command.cog
-    assert isinstance(cog, FilterCog)
-    return [n for n in cog.checkers if n.startswith(arg)]
+def convert_checker(type: Type[_TChecker] = BaseChecker) -> Callable[[types.AnyContext, str], Coroutine[Any, Any, _TChecker]]:  # type: ignore[assignment]
+    async def convert(ctx: types.AnyContext, arg: str) -> _TChecker:
+        cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
+        assert isinstance(cog, FilterCog)
+        checkers = cog.get_checkers(type)
+        if arg not in checkers:
+            err = f'Invalid argument. Valid choices: {list(checkers.keys())}'
+            await ctx.send(err)
+            raise utils.suppress_help(commands.BadArgument(err))
+        return checkers[arg]
+    return convert
 
 
-checker_param = commands.Param(
-    # conv=convert_checker,
-    autocomp=autocomp_checker,
-)
+def autocomp_checker(type: Type[BaseChecker] = BaseChecker) -> Callable[[types.AppCI, str], Coroutine[Any, Any, List[str]]]:
+    async def autocomp(ctx: types.AppCI, arg: str) -> List[str]:
+        cog = ctx.application_command.cog
+        assert isinstance(cog, FilterCog)
+        return [n for n in cog.get_checkers(type) if n.startswith(arg)]
+    return autocomp
 
 
 @dataclass
@@ -58,6 +60,9 @@ class FilterCog(BaseCog[State]):
             'regex': RegexChecker(),
             'ips': IPChecker()
         }
+
+    def get_checkers(self, type: Type[_TChecker]) -> Dict[str, _TChecker]:
+        return {k: c for k, c in self.checkers.items() if isinstance(c, type)}
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -246,8 +251,13 @@ class FilterCog(BaseCog[State]):
         name='add',
         description='Adds an entry to a filter list'
     )
-    async def filter_add(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
-        blocklist = await convert_checker(ctx, blocklist_)
+    async def filter_add(
+        self,
+        ctx: types.AnyContext,
+        blocklist_: str = commands.Param(autocomp=autocomp_checker(ManualBaseChecker)),
+        input: str = commands.Param()
+    ) -> None:
+        blocklist = await convert_checker(ManualBaseChecker)(ctx, blocklist_)
         logger.info(f'adding {input} to list')
         res = blocklist.entry_add(input)
         if res is True:
@@ -261,8 +271,13 @@ class FilterCog(BaseCog[State]):
         name='remove',
         description='Removes an entry from a filter list'
     )
-    async def filter_remove(self, ctx: types.AnyContext, blocklist_: str = checker_param, input: str = commands.Param()) -> None:
-        blocklist = await convert_checker(ctx, blocklist_)
+    async def filter_remove(
+        self,
+        ctx: types.AnyContext,
+        blocklist_: str = commands.Param(autocomp=autocomp_checker(ManualBaseChecker)),
+        input: str = commands.Param()
+    ) -> None:
+        blocklist = await convert_checker(ManualBaseChecker)(ctx, blocklist_)
         logger.info(f'removing {input} from list')
         if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
@@ -273,8 +288,13 @@ class FilterCog(BaseCog[State]):
         name='list',
         description='Shows all entries in a filter list'
     )
-    async def filter_list(self, ctx: types.AnyContext, blocklist_: str = checker_param, raw: bool = False) -> None:
-        blocklist = await convert_checker(ctx, blocklist_)
+    async def filter_list(
+        self,
+        ctx: types.AnyContext,
+        blocklist_: str = commands.Param(autocomp=autocomp_checker(BaseChecker)),
+        raw: bool = False
+    ) -> None:
+        blocklist = await convert_checker(BaseChecker)(ctx, blocklist_)
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return

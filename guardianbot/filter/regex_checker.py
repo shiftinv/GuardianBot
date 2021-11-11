@@ -1,10 +1,10 @@
 import re
 from typing import Optional, Union
 
-from ._base import BaseChecker
+from ._base import ManualBaseChecker
 
 
-class RegexChecker(BaseChecker):
+class RegexChecker(ManualBaseChecker):
     def __init__(self):
         super().__init__('blocklist_regex.json')
 

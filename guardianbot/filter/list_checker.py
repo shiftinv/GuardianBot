@@ -1,9 +1,9 @@
 from typing import Optional
 
-from ._base import BaseChecker
+from ._base import ManualBaseChecker
 
 
-class ListChecker(BaseChecker):
+class ListChecker(ManualBaseChecker):
     def __init__(self):
         super().__init__('blocklist.json')
 
