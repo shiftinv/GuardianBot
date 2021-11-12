@@ -4,9 +4,9 @@ import asyncio
 import logging
 import itertools
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import Dict, List, Set, Union, cast
 
-from ._base import ManualBaseChecker
+from ._base import ManualBaseChecker, CheckResult
 from .. import utils
 
 
@@ -36,7 +36,7 @@ class IPChecker(ManualBaseChecker):
 
     # overridden methods
 
-    async def check_match(self, input: str) -> Optional[str]:
+    async def check_match(self, input: str) -> CheckResult:
         hosts = utils.extract_hosts(input)
         if not hosts:
             return None
@@ -44,12 +44,12 @@ class IPChecker(ManualBaseChecker):
 
         ip_groups: List[List[str]] = await asyncio.gather(*map(self.resolve, hosts))
         logger.debug(f'resolved IPs: {ip_groups}')
-        ips = list(map(IPv4Address, itertools.chain(*ip_groups)))
 
         for net in self._networks:
-            for ip in ips:
-                if ip in net:
-                    return f'filtered IP: `{ip}` (matched `{net}`)'
+            for host, ips in zip(hosts, ip_groups):
+                for ip in ips:
+                    if IPv4Address(ip) in net:
+                        return f'filtered IP: `{ip}` (matched `{net}`)', host
         return None
 
     def entry_add(self, input: str) -> Union[bool, str]:

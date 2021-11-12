@@ -11,6 +11,7 @@ from disnake.ext import commands
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
 from .. import checks, error_handler, interactions, multicmd, utils, types
 from ..filter import \
+    AllowList, \
     BaseChecker, ManualBaseChecker, ExternalBaseChecker, \
     DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
@@ -57,7 +58,9 @@ class FilterCog(BaseCog[State]):
     def __init__(self, bot: types.Bot):
         super().__init__(bot)
 
+        self.allowlist = AllowList()
         self.checkers: Dict[str, BaseChecker] = {
+            'allowed_hosts': self.allowlist,
             'strings': ListChecker(),
             'regex': RegexChecker(),
             'bad-domains': DiscordBadDomainsChecker(),
@@ -136,8 +139,20 @@ class FilterCog(BaseCog[State]):
             return
 
         for checker in self.checkers.values():
-            if filter_reason := await utils.wait_timeout(checker.check_match(message.content), 5, None):  # 5 second timeout
-                await self._handle_blocked(message, filter_reason)
+            if checker is self.allowlist:
+                continue
+
+            if result := await utils.wait_timeout(
+                checker.check_match(message.content),
+                5,  # 5 second timeout
+                None
+            ):
+                if isinstance(result, tuple):
+                    result, host = result
+                    if host in self.allowlist:
+                        logger.info(f'preventing block, host \'{host}\' is allowed explicitly')
+                        continue
+                await self._handle_blocked(message, result)
                 break
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:

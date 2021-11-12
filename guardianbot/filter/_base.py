@@ -2,22 +2,25 @@ import os
 import json
 import logging
 import aiohttp
-from typing import Any, Iterable, Iterator, List, Optional, Sized, Union
+from typing import Any, Collection, Iterator, List, Optional, Tuple, Union
 
 from ..config import Config
 
 
+# result is either just a reason str, or a (reason, host) tuple
+CheckResult = Optional[Union[str, Tuple[str, str]]]
+
 logger = logging.getLogger(__name__)
 
 
-class BaseChecker(Iterable[str], Sized):
+class BaseChecker(Collection[str]):
     def __init__(self, cache_name: str):
         self.__cache_name = cache_name
         self._strings: List[str] = []
 
         self._load_list()
 
-    async def check_match(self, input: str) -> Optional[str]:
+    async def check_match(self, input: str) -> Optional[CheckResult]:
         ''' Returns a reason string if the input matched and should be blocked, returns None otherwise '''
         raise NotImplementedError
 

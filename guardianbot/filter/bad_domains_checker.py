@@ -18,7 +18,7 @@ class DiscordBadDomainsChecker(ExternalBaseChecker):
         for host in hosts:
             h = hashlib.sha256(host.lower().encode()).hexdigest()
             if h in self:
-                return f'filtered host: `{host}` (bad-domains hash)'
+                return f'filtered host: `{host}` (bad-domains hash)', host
         return None
 
     async def _process_update(self, res: aiohttp.ClientResponse) -> List[str]:
