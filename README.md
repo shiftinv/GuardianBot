@@ -5,7 +5,8 @@ Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-base
 
 ## Installation
 
-1. Copy `docker-compose.yml.skel` to `docker-compose.yml`, add the token, guild ID, and muted role ID (see below)
+1. Copy `docker-compose.yml.skel` to `docker-compose.yml`, and fill in the environment variables marked with `<EMPTY>`
+    - `MOD_ROLE_IDS` is primarily cosmetic and only used to restrict slash commands to specific roles. Any user will still always require the `Manage Messages` permission for commands, regardless of this value
 2. Create the data directory (`_data` by default, see `docker-compose.yml`), and update the permissions (`chmod 777 _data` or `chown 1000:1000 _data`)
 3. Build + Run: `make && docker-compose up`
 
@@ -24,31 +25,31 @@ Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-base
 
 ## Usage
 
-The [filter](./guardianbot/cogs/filter.py) cog handles three types of filter lists, which are checked in order:
+**Note: most commands are also available as slash commands, i.e. using `/` instead of `?`.**
+
+The [filter](./guardianbot/cogs/filter.py) cog handles four types of filter lists, which are checked in order:
 - `strings`, contains keywords which are matched literally (case sensitive)
 - `regex`, contains regular expressions to filter with
+- `bad_domains`, which is automatically updated from Discord's bad-domains hash list, and cannot be modified manually
 - `ips`, contains IPs or CIDRs (e.g. `127.0.0.0/8`) of domains to filter
 
-Commands for managing these lists:
+The `allowed_hosts` list can be used to explicitly allow specific domains/hostnames.
+
+Commands for managing lists:
 - `?filter add <list> <keyword/ip>`
 - `?filter remove <list> <keyword/ip>`
 - `?filter list <list> [raw]`
 
-Additionally, there are `?mute <user> <duration>`/`?unmute <user>` commands (self-explanatory), and a `?muted` command to list currently muted users and the expiry.
+Additionally, there are `?mute <user> <duration>`/`?unmute <user>` commands, and a `?muted` command to list currently muted users and the expiry.
 
 <br>
 
-The [core](./guardianbot/cogs/core.py) cog contains a few general-purpose commands:
-- `?info` (displays version info, uptime, ping)
-- `?say <channel> <message>` (self-explanatory)
-    - requires `Manage Messages` permission
-- `?shutdown`/`?restart` (shuts down the bot, immediately restarting again by default as specified in `docker-compose.yml`)
-    - owner-only
+The [core](./guardianbot/cogs/core.py) cog contains a few general-purpose and utility commands.
 
 
+---
 ## Notes
 
 - A user must either be the bot owner or have the `Manage Messages` permission to be able to issue most commands
 - Filter automatically excludes commands and other bots, in addition to the specified roles
-- This bot uses [discord.py](https://github.com/Rapptz/discord.py) v2/master, not the latest release (v1.7.3 at the time of writing), so be prepared for bugs/stability issues
 - If no muted role is configured, the bot will only delete matching messages and not assign any role

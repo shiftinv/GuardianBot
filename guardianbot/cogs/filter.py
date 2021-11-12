@@ -63,7 +63,7 @@ class FilterCog(BaseCog[State]):
             'allowed_hosts': self.allowlist,
             'strings': ListChecker(),
             'regex': RegexChecker(),
-            'bad-domains': DiscordBadDomainsChecker(),
+            'bad_domains': DiscordBadDomainsChecker(),
             'ips': IPChecker()
         }
 
