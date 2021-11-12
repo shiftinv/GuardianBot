@@ -1,5 +1,6 @@
 import json
 import logging
+import aiohttp
 import disnake
 import functools
 from pathlib import Path
@@ -124,6 +125,12 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
         guild = self._bot.get_guild(Config.guild_id)
         assert guild
         return guild
+
+    @disnake.utils.cached_property
+    def _session(self) -> aiohttp.ClientSession:
+        session = aiohttp.ClientSession(connector=self._bot.http.connector)
+        session._request = functools.partial(session._request, proxy=self._bot.http.proxy)  # type: ignore[assignment]
+        return session
 
 
 _CogT = TypeVar('_CogT', bound=BaseCog[Any])
