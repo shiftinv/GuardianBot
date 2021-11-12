@@ -1,7 +1,8 @@
 import os
 import json
 import logging
-from typing import Iterable, Iterator, List, Optional, Sized, Union
+import aiohttp
+from typing import Any, Iterable, Iterator, List, Optional, Sized, Union
 
 from ..config import Config
 
@@ -44,6 +45,9 @@ class BaseChecker(Iterable[str], Sized):
     def __iter__(self) -> Iterator[str]:
         yield from self._strings
 
+    def __contains__(self, obj: Any) -> bool:
+        return obj in self._strings
+
 
 class ManualBaseChecker(BaseChecker):
     def entry_add(self, input: str) -> Union[bool, str]:
@@ -66,3 +70,18 @@ class ManualBaseChecker(BaseChecker):
         self._strings.remove(input)
         self._write_list()
         return True
+
+
+class ExternalBaseChecker(BaseChecker):
+    def __init__(self, cache_name: str, url: str):
+        super().__init__(cache_name)
+        self._url = url
+
+    async def update(self, session: aiohttp.ClientSession) -> None:
+        async with session.get(self._url) as res:
+            res.raise_for_status()
+            self._strings = await self._process_update(res)
+        self._write_list()
+
+    async def _process_update(self, res: aiohttp.ClientResponse) -> List[str]:
+        raise NotImplementedError

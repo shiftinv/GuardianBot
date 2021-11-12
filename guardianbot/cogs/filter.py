@@ -9,8 +9,10 @@ from disnake.ext import commands
 
 
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
-from .. import checks, interactions, multicmd, utils, types
-from ..filter import BaseChecker, ManualBaseChecker, IPChecker, ListChecker, RegexChecker
+from .. import checks, error_handler, interactions, multicmd, utils, types
+from ..filter import \
+    BaseChecker, ManualBaseChecker, ExternalBaseChecker, \
+    DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker
 from ..config import Config
 
 
@@ -58,6 +60,7 @@ class FilterCog(BaseCog[State]):
         self.checkers: Dict[str, BaseChecker] = {
             'strings': ListChecker(),
             'regex': RegexChecker(),
+            'bad-domains': DiscordBadDomainsChecker(),
             'ips': IPChecker()
         }
 
@@ -66,13 +69,16 @@ class FilterCog(BaseCog[State]):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        logger.debug('starting tasks')
         if Config.muted_role_id and not self._unmute_expired.is_running():
-            logger.debug('starting unmute loop')
             self._unmute_expired.start()
+        if not self._update_checkers.is_running():
+            self._update_checkers.start()
 
     def cog_unload(self) -> None:
-        logger.debug('stopping unmute loop')
+        logger.debug('stopping tasks')
         self._unmute_expired.stop()
+        self._update_checkers.stop()
 
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return await checks.manage_messages(ctx)
@@ -80,6 +86,15 @@ class FilterCog(BaseCog[State]):
     @staticmethod
     def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
         return [interactions.allow_mod], False
+
+    @loop_error_handled(hours=2)
+    async def _update_checkers(self) -> None:
+        results = await asyncio.gather(
+            *(c.update(self._session) for c in self.get_checkers(ExternalBaseChecker).values()),
+            return_exceptions=True
+        )
+        for exc in (e for e in results if isinstance(e, Exception)):
+            await error_handler.handle_task_error(self._bot, exc)
 
     @loop_error_handled(minutes=1)
     async def _unmute_expired(self) -> None:
