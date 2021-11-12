@@ -75,6 +75,22 @@ class FilterCog(BaseCog[State]):
         if not self._update_checkers.is_running():
             self._update_checkers.start()
 
+        # hacky self-test because I don't trust myself
+        async with utils.catch_and_exit(self._bot):
+            async def fake_can_run(*args: Any) -> bool:
+                return True
+
+            async def fake_is_owner(*args: Any) -> bool:
+                return False
+
+            for perm in (True, False):
+                ctx: Any = utils.dotdict()
+                ctx.bot = utils.dotdict(can_run=fake_can_run, is_owner=fake_is_owner)
+                ctx.guild = utils.dotdict(id=Config.guild_id)
+                ctx.author = utils.dotdict(guild_permissions=disnake.Permissions(manage_messages=perm))
+                cmd = next(c for c in self.__cog_commands__ if c.name == 'filter')
+                assert (await cmd.can_run(ctx)) is perm, f'expected result to be {perm}'
+
     def cog_unload(self) -> None:
         logger.debug('stopping tasks')
         self._unmute_expired.stop()

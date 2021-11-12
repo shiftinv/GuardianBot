@@ -131,3 +131,9 @@ def patch_parameters(func: TCallable, map_func: Callable[[inspect.Parameter], Di
     sig = inspect.signature(func)
     new_p = [p.replace(**map_func(p)) for p in sig.parameters.values()]
     return copy_patch_signature(func, sig.replace(parameters=new_p))
+
+
+class dotdict(dict):  # type: ignore
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__  # type: ignore
+    __delattr__ = dict.__delitem__  # type: ignore
