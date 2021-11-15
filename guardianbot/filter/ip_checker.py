@@ -2,7 +2,7 @@ import socket
 import aiodns
 import asyncio
 import logging
-import itertools
+import disnake
 from ipaddress import IPv4Address, IPv4Network
 from typing import Dict, List, Set, Union, cast
 
@@ -36,8 +36,8 @@ class IPChecker(ManualBaseChecker):
 
     # overridden methods
 
-    async def check_match(self, input: str) -> CheckResult:
-        hosts = utils.extract_hosts(input)
+    async def check_match(self, msg: disnake.Message) -> CheckResult:
+        hosts = utils.extract_hosts(msg.content)
         if not hosts:
             return None
         logger.debug(f'extracted hosts: {hosts}')

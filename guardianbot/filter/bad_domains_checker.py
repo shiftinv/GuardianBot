@@ -1,6 +1,7 @@
 import hashlib
 import aiohttp
-from typing import List, Optional
+import disnake
+from typing import List
 
 from ._base import ExternalBaseChecker, CheckResult
 from .. import utils
@@ -13,8 +14,8 @@ class DiscordBadDomainsChecker(ExternalBaseChecker):
             'https://cdn.discordapp.com/bad-domains/hashes.json',
         )
 
-    async def check_match(self, input: str) -> CheckResult:
-        hosts = utils.extract_hosts(input)
+    async def check_match(self, msg: disnake.Message) -> CheckResult:
+        hosts = utils.extract_hosts(msg.content)
         for host in hosts:
             h = hashlib.sha256(host.lower().encode()).hexdigest()
             if h in self:

@@ -143,7 +143,7 @@ class FilterCog(BaseCog[State]):
                 continue
 
             if result := await utils.wait_timeout(
-                checker.check_match(message.content),
+                checker.check_match(message),
                 5,  # 5 second timeout
                 None
             ):

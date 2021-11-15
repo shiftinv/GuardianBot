@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import aiohttp
+import disnake
 from typing import Any, Collection, Iterator, List, Optional, Tuple, Union
 
 from ..config import Config
@@ -20,7 +21,7 @@ class BaseChecker(Collection[str]):
 
         self._load_list()
 
-    async def check_match(self, input: str) -> Optional[CheckResult]:
+    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
         ''' Returns a reason string if the input matched and should be blocked, returns None otherwise '''
         raise NotImplementedError
 
