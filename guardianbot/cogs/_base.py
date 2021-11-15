@@ -128,7 +128,10 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
 
     @disnake.utils.cached_property
     def _session(self) -> aiohttp.ClientSession:
-        session = aiohttp.ClientSession(connector=self._bot.http.connector)
+        session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=30),
+            connector=self._bot.http.connector,
+        )
         session._request = functools.partial(session._request, proxy=self._bot.http.proxy)  # type: ignore[assignment]
         return session
 
