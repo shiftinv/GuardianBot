@@ -147,12 +147,10 @@ class FilterCog(BaseCog[State]):
                 5,  # 5 second timeout
                 None
             ):
-                if isinstance(result, tuple):
-                    result, host = result
-                    if host in self.allowlist:
-                        logger.info(f'preventing block, host \'{host}\' is allowed explicitly')
-                        continue
-                await self._handle_blocked(message, result)
+                if result.host and result.host in self.allowlist:
+                    logger.info(f'preventing block, host \'{result.host}\' is allowed explicitly')
+                    continue
+                await self._handle_blocked(message, result.reason)
                 break
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:

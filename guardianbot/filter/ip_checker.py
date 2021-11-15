@@ -4,7 +4,7 @@ import asyncio
 import logging
 import disnake
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Set, Union, cast
+from typing import Dict, List, Optional, Set, Union, cast
 
 from ._base import ManualBaseChecker, CheckResult
 from .. import utils
@@ -36,7 +36,7 @@ class IPChecker(ManualBaseChecker):
 
     # overridden methods
 
-    async def check_match(self, msg: disnake.Message) -> CheckResult:
+    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
         hosts = utils.extract_hosts(msg.content)
         if not hosts:
             return None
@@ -49,7 +49,7 @@ class IPChecker(ManualBaseChecker):
             for host, ips in zip(hosts, ip_groups):
                 for ip in ips:
                     if IPv4Address(ip) in net:
-                        return f'filtered IP: `{ip}` (matched `{net}`)', host
+                        return CheckResult(f'filtered IP: `{ip}` (matched `{net}`)', host=host)
         return None
 
     def entry_add(self, input: str) -> Union[bool, str]:

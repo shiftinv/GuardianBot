@@ -3,13 +3,19 @@ import json
 import logging
 import aiohttp
 import disnake
-from typing import Any, Collection, Iterator, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, Collection, Iterator, List, Optional, Union
 
 from ..config import Config
 
 
-# result is either just a reason str, or a (reason, host) tuple
-CheckResult = Optional[Union[str, Tuple[str, str]]]
+@dataclass(frozen=True)
+class CheckResult:
+    # reason for filter match
+    reason: str
+    # hostname if host-based block (IP, bad-domains, ...)
+    host: Optional[str] = None
+
 
 logger = logging.getLogger(__name__)
 
