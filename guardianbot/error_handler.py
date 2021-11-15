@@ -22,7 +22,8 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
             # ignore check/command failures
             return True
         elif exc:
-            msg = f'{type(exc).__name__}: `{exc}`\n'
+            msg = str(exc).replace('`', '\'')
+            msg = f'{type(exc).__name__}: `{msg}`\n'
             full = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
 
             if len(msg) + len(full) < 2000:
