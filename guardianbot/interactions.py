@@ -11,7 +11,7 @@ class CustomSyncBot(commands.Bot):
             # make sure `default_permission` is `False` if custom permissions are set
             all_perms: List[bool] = []
             for u in command.permissions.values():
-                for p in (u.permissions, u.roles, u.users, {None: u.owner} if u.owner is not None else None):
+                for p in (u.permissions, u.role_ids, u.user_ids, {None: u.owner} if u.owner is not None else None):
                     if not p:
                         continue
                     all_perms.extend(p.values())
