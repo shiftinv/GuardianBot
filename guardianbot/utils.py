@@ -120,7 +120,9 @@ TCallable = TypeVar('TCallable', bound=Callable[..., Any])
 def copy_patch_signature(func: TCallable, sig: inspect.Signature) -> TCallable:
     # copy function
     new_func = _types.FunctionType(func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__)  # type: ignore[attr-defined]
-    new_func.__dict__.update(func.__dict__)
+    new_func = functools.update_wrapper(new_func, func)
+    new_func.__kwdefaults__ = func.__kwdefaults__  # type: ignore
+    del new_func.__wrapped__  # type: ignore
 
     # set signature
     new_func.__signature__ = sig  # type: ignore[attr-defined]
