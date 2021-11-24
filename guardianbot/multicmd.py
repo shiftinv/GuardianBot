@@ -46,6 +46,24 @@ def group(
     return wrap
 
 
+# utilities
+
+async def defer(ctx: types.AnyContext) -> None:
+    if isinstance(ctx, types.AppCI):
+        await ctx.response.defer()
+    else:
+        msg = await ctx.send(f'**•••** {ctx.me.name} is thinking...')
+        setattr(ctx, '__response_message__', msg.id)
+
+
+async def edit_response(ctx: types.AnyContext, **kwargs: Any) -> None:
+    if isinstance(ctx, types.AppCI):
+        await ctx.edit_original_message(**kwargs)
+    else:
+        msg = ctx.channel.get_partial_message(getattr(ctx, '__response_message__'))
+        await msg.edit(**kwargs)
+
+
 #####
 # internal stuff
 
