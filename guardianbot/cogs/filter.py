@@ -176,13 +176,13 @@ class FilterCog(BaseCog[State]):
 
     async def _handle_blocked(self, message: disnake.Message, reason: str, to_delete: List[disnake.Message]) -> None:
         author = cast(disnake.Member, message.author)
-        logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
+        logger.info(f'blocking message(s) by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         tasks: List[Awaitable[Any]] = []
         # delete messages
         if message not in to_delete:
             to_delete += [message]  # intentionally not modifying in-place, just in case
-        logger.info(f'deleting {len(to_delete)} messages')
+        logger.info(f'deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}')
         tasks.extend(m.delete() for m in to_delete)
 
         # mute user
