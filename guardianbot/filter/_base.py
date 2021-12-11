@@ -4,9 +4,12 @@ import logging
 import aiohttp
 import disnake
 from dataclasses import dataclass
-from typing import Any, Collection, Iterator, List, Optional, Union
+from typing import Any, Collection, Iterator, List, Optional, Sequence, Union
 
 from ..config import Config
+
+
+AnyMessageList = Sequence[Union[disnake.Message, disnake.PartialMessage]]
 
 
 @dataclass(frozen=True)
@@ -16,7 +19,7 @@ class CheckResult:
     # hostname if host-based block (IP, bad-domains, ...)
     host: Optional[str] = None
     # messages to delete, if multiple
-    messages: Optional[List[disnake.Message]] = None
+    messages: Optional[AnyMessageList] = None
 
 
 logger = logging.getLogger(__name__)

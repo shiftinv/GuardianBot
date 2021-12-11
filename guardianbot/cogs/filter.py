@@ -11,9 +11,9 @@ from disnake.ext import commands
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
 from .. import checks, error_handler, interactions, multicmd, utils, types
 from ..filter import \
-    AllowList, \
+    AllowList, AnyMessageList, \
     BaseChecker, ManualBaseChecker, ExternalBaseChecker, \
-    DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker
+    DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker, SpamChecker, SpamCheckerConfig
 from ..config import Config
 
 
@@ -49,6 +49,7 @@ class State:
     report_channel: Optional[int] = None
     mute_minutes: int = 10
     unfiltered_roles: Set[int] = field(default_factory=set)
+    spam_checker_config: SpamCheckerConfig = field(default_factory=SpamCheckerConfig)
 
     # using str instead of int since json only supports string keys
     _muted_users: Dict[str, Optional[datetime]] = field(default_factory=dict)
@@ -64,6 +65,7 @@ class FilterCog(BaseCog[State]):
             'strings': ListChecker(),
             'regex': RegexChecker(),
             'bad_domains': DiscordBadDomainsChecker(),
+            'spam_regex': SpamChecker(self.state.spam_checker_config),
             'ips': IPChecker()
         }
 
@@ -174,16 +176,16 @@ class FilterCog(BaseCog[State]):
 
         return True, ''
 
-    async def _handle_blocked(self, message: disnake.Message, reason: str, to_delete: List[disnake.Message]) -> None:
+    async def _handle_blocked(self, message: disnake.Message, reason: str, to_delete: AnyMessageList) -> None:
         author = cast(disnake.Member, message.author)
         logger.info(f'blocking message(s) by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         tasks: List[Awaitable[Any]] = []
         # delete messages
-        if message not in to_delete:
-            to_delete += [message]  # intentionally not modifying in-place, just in case
+        if message.id not in (m.id for m in to_delete):
+            to_delete = [*to_delete, message]
         logger.info(f'deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}')
-        tasks.extend(m.delete() for m in to_delete)
+        tasks.extend(m.delete() for m in to_delete)  # type: ignore  # mypy is confused about this for some reason
 
         # mute user
         mute = Config.muted_role_id is not None
@@ -195,7 +197,8 @@ class FilterCog(BaseCog[State]):
             ))
 
         delete_res = await asyncio.gather(*tasks, return_exceptions=True)
-        for exc in (e for e in delete_res if isinstance(delete_res, Exception)):
+        for exc in (e for e in delete_res if isinstance(e, Exception)):
+            # TODO: don't skip exceptions from _mute_user here
             if not isinstance(exc, disnake.errors.NotFound):
                 raise exc
 
