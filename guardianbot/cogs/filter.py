@@ -3,7 +3,7 @@ import asyncio
 import logging
 import disnake
 from datetime import datetime, timedelta
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 from dataclasses import dataclass, field
 from disnake.ext import commands
 
@@ -150,7 +150,7 @@ class FilterCog(BaseCog[State]):
                 if result.host and result.host in self.allowlist:
                     logger.info(f'preventing block, host \'{result.host}\' is allowed explicitly')
                     continue
-                await self._handle_blocked(message, result.reason)
+                await self._handle_blocked(message, result.reason, result.messages or [message])
                 break
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
@@ -174,13 +174,16 @@ class FilterCog(BaseCog[State]):
 
         return True, ''
 
-    async def _handle_blocked(self, message: disnake.Message, reason: str) -> None:
+    async def _handle_blocked(self, message: disnake.Message, reason: str, to_delete: List[disnake.Message]) -> None:
         author = cast(disnake.Member, message.author)
         logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
-        tasks = []
-        # delete message
-        tasks.append(message.delete())
+        tasks: List[Awaitable[Any]] = []
+        # delete messages
+        if message not in to_delete:
+            to_delete += [message]  # intentionally not modifying in-place, just in case
+        logger.info(f'deleting {len(to_delete)} messages')
+        tasks.extend(m.delete() for m in to_delete)
 
         # mute user
         mute = Config.muted_role_id is not None

@@ -15,6 +15,8 @@ class CheckResult:
     reason: str
     # hostname if host-based block (IP, bad-domains, ...)
     host: Optional[str] = None
+    # messages to delete, if multiple
+    messages: Optional[List[disnake.Message]] = None
 
 
 logger = logging.getLogger(__name__)
