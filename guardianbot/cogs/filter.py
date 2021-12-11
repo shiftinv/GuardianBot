@@ -193,7 +193,11 @@ class FilterCog(BaseCog[State]):
                 timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
                 reason
             ))
-        await asyncio.gather(*tasks)
+
+        delete_res = await asyncio.gather(*tasks, return_exceptions=True)
+        for exc in (e for e in delete_res if isinstance(delete_res, Exception)):
+            if not isinstance(exc, disnake.errors.NotFound):
+                raise exc
 
         # send notification to channel
         if self.state.report_channel:
