@@ -3,17 +3,17 @@ import asyncio
 import logging
 import disnake
 from datetime import datetime, timedelta
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
-from dataclasses import dataclass, field
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 from disnake.ext import commands
+from pydantic import BaseModel
 
 
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
 from .. import checks, error_handler, interactions, multicmd, utils, types
 from ..filter import \
-    AllowList, \
+    AllowList, AnyMessageList, \
     BaseChecker, ManualBaseChecker, ExternalBaseChecker, \
-    DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker
+    DiscordBadDomainsChecker, IPChecker, ListChecker, RegexChecker, SpamChecker, SpamCheckerConfig
 from ..config import Config
 
 
@@ -44,14 +44,14 @@ def autocomp_checker(type: Type[BaseChecker] = BaseChecker) -> Callable[[types.A
     return autocomp
 
 
-@dataclass
-class State:
+class State(BaseModel):
     report_channel: Optional[int] = None
     mute_minutes: int = 10
-    unfiltered_roles: Set[int] = field(default_factory=set)
+    unfiltered_roles: Set[int] = set()
+    spam_checker_config: SpamCheckerConfig = SpamCheckerConfig()
 
     # using str instead of int since json only supports string keys
-    _muted_users: Dict[str, Optional[datetime]] = field(default_factory=dict)
+    _muted_users: Dict[str, Optional[datetime]] = {}
 
 
 class FilterCog(BaseCog[State]):
@@ -64,6 +64,7 @@ class FilterCog(BaseCog[State]):
             'strings': ListChecker(),
             'regex': RegexChecker(),
             'bad_domains': DiscordBadDomainsChecker(),
+            'spam_regex': SpamChecker(self.state.spam_checker_config),
             'ips': IPChecker()
         }
 
@@ -143,16 +144,14 @@ class FilterCog(BaseCog[State]):
                 continue
 
             if result := await utils.wait_timeout(
-                checker.check_match(message.content),
+                checker.check_match(message),
                 5,  # 5 second timeout
                 None
             ):
-                if isinstance(result, tuple):
-                    result, host = result
-                    if host in self.allowlist:
-                        logger.info(f'preventing block, host \'{host}\' is allowed explicitly')
-                        continue
-                await self._handle_blocked(message, result)
+                if result.host and result.host in self.allowlist:
+                    logger.info(f'preventing block, host \'{result.host}\' is allowed explicitly')
+                    continue
+                await self._handle_blocked(message, result.reason, result.messages or [message])
                 break
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
@@ -176,13 +175,16 @@ class FilterCog(BaseCog[State]):
 
         return True, ''
 
-    async def _handle_blocked(self, message: disnake.Message, reason: str) -> None:
+    async def _handle_blocked(self, message: disnake.Message, reason: str, to_delete: AnyMessageList) -> None:
         author = cast(disnake.Member, message.author)
-        logger.info(f'blocking message {message.id} by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
+        logger.info(f'blocking message(s) by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
-        tasks = []
-        # delete message
-        tasks.append(message.delete())
+        tasks: List[Awaitable[Any]] = []
+        # delete messages
+        if message.id not in (m.id for m in to_delete):
+            to_delete = [*to_delete, message]
+        logger.info(f'deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}')
+        tasks.extend(m.delete() for m in to_delete)  # type: ignore  # mypy is confused about this for some reason
 
         # mute user
         mute = Config.muted_role_id is not None
@@ -192,7 +194,12 @@ class FilterCog(BaseCog[State]):
                 timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
                 reason
             ))
-        await asyncio.gather(*tasks)
+
+        delete_res = await asyncio.gather(*tasks, return_exceptions=True)
+        for exc in (e for e in delete_res if isinstance(e, Exception)):
+            # TODO: don't skip exceptions from _mute_user here
+            if not isinstance(exc, disnake.errors.NotFound):
+                raise exc
 
         # send notification to channel
         if self.state.report_channel:

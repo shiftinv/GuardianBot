@@ -2,13 +2,25 @@ import os
 import json
 import logging
 import aiohttp
-from typing import Any, Collection, Iterator, List, Optional, Tuple, Union
+import disnake
+from dataclasses import dataclass
+from typing import Any, Collection, Iterator, List, Optional, Sequence, Union
 
 from ..config import Config
 
 
-# result is either just a reason str, or a (reason, host) tuple
-CheckResult = Optional[Union[str, Tuple[str, str]]]
+AnyMessageList = Sequence[Union[disnake.Message, disnake.PartialMessage]]
+
+
+@dataclass(frozen=True)
+class CheckResult:
+    # reason for filter match
+    reason: str
+    # hostname if host-based block (IP, bad-domains, ...)
+    host: Optional[str] = None
+    # messages to delete, if multiple
+    messages: Optional[AnyMessageList] = None
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +32,7 @@ class BaseChecker(Collection[str]):
 
         self._load_list()
 
-    async def check_match(self, input: str) -> Optional[CheckResult]:
+    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
         ''' Returns a reason string if the input matched and should be blocked, returns None otherwise '''
         raise NotImplementedError
 

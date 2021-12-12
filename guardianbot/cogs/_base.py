@@ -1,12 +1,10 @@
-import json
 import logging
 import aiohttp
 import disnake
 import functools
 from pathlib import Path
-from datetime import datetime
-from dataclasses import asdict, fields, is_dataclass
-from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, get_args
+from pydantic import BaseModel
+from typing import Any, Awaitable, Callable, Generic, List, Optional, Tuple, Type, TypeVar, cast, get_args
 from disnake.ext import commands, tasks
 
 from .. import error_handler, interactions, multicmd, types
@@ -16,23 +14,7 @@ from ..config import Config
 logger = logging.getLogger(__name__)
 
 
-class _CustomEncoder(json.JSONEncoder):
-    def default(self, o: Any) -> Any:
-        if isinstance(o, set):
-            return {'$__set': list(o)}
-        if isinstance(o, datetime):
-            return {'$__datetime': o.isoformat()}
-        return super().default(o)
-
-
-def _custom_decoder(dct: Dict[str, Any]) -> Any:
-    if '$__set' in dct:
-        return set(dct['$__set'])
-    if '$__datetime' in dct:
-        return datetime.fromisoformat(dct['$__datetime'])
-    return dct
-
-
+# no `Optional[BaseModel]` bound since narrowing optional typevar bounds is close to impossible
 _TState = TypeVar('_TState')
 PermissionDecorator = Callable[[Any], Any]
 
@@ -64,11 +46,12 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
 
         self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
         # get `_TState` at runtime
-        self.__state_type = get_args(type(self).__orig_bases__[0])[0]  # type: ignore
-        if self.__state_type is type(None):  # noqa: E721
-            self.__state_type = None
+        state_type = get_args(type(self).__orig_bases__[0])[0]  # type: ignore
+        if state_type is type(None):  # noqa: E721
+            state_type = None
         else:
-            assert is_dataclass(self.__state_type), f'state type must be a dataclass (got \'{self.__state_type}\')'
+            assert issubclass(state_type, BaseModel), f'state type must inherit from `pydantic.BaseModel` (got \'{state_type}\')'
+        self.__state_type: Optional[Type[BaseModel]] = state_type
 
         self._read_state()
 
@@ -78,15 +61,10 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             return
 
         if self.__state_path.exists():
-            state_dict: Dict[str, Any] = json.loads(self.__state_path.read_text(), object_hook=_custom_decoder)
-            state_field_names = {field.name for field in fields(self.__state_type)}
-            for key in list(state_dict.keys()):
-                if key not in state_field_names:
-                    logger.warning(f'removing unknown state field in \'{self.__state_path}\': \'{key}\'')
-                    del state_dict[key]
-            self.state = self.__state_type(**state_dict)
+            state = self.__state_type.parse_file(self.__state_path)
         else:
-            self.state = self.__state_type()
+            state = self.__state_type()
+        self.state = cast(_TState, state)  # see `_TState` comment above
         self._write_state()
 
     def _write_state(self) -> None:
@@ -94,7 +72,7 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             return
 
         self.__state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.__state_path.write_text(json.dumps(asdict(self.state), cls=_CustomEncoder, indent=4))
+        self.__state_path.write_text(cast(BaseModel, self.state).json(indent=4))
 
     # checks
 
