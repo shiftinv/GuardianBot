@@ -4,8 +4,8 @@ import logging
 import disnake
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
-from dataclasses import dataclass, field
 from disnake.ext import commands
+from pydantic import BaseModel
 
 
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
@@ -44,15 +44,14 @@ def autocomp_checker(type: Type[BaseChecker] = BaseChecker) -> Callable[[types.A
     return autocomp
 
 
-@dataclass
-class State:
+class State(BaseModel):
     report_channel: Optional[int] = None
     mute_minutes: int = 10
-    unfiltered_roles: Set[int] = field(default_factory=set)
-    spam_checker_config: SpamCheckerConfig = field(default_factory=SpamCheckerConfig)
+    unfiltered_roles: Set[int] = set()
+    spam_checker_config: SpamCheckerConfig = SpamCheckerConfig()
 
     # using str instead of int since json only supports string keys
-    _muted_users: Dict[str, Optional[datetime]] = field(default_factory=dict)
+    _muted_users: Dict[str, Optional[datetime]] = {}
 
 
 class FilterCog(BaseCog[State]):
