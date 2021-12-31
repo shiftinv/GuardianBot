@@ -158,12 +158,6 @@ class FilterCog(BaseCog[State]):
         logger.info(f'blocking message(s) by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         tasks: List[Awaitable[Any]] = []
-        # delete messages
-        if message.id not in (m.id for m in to_delete):
-            to_delete = [*to_delete, message]
-        logger.info(f'deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}')
-        tasks.extend(m.delete() for m in to_delete)  # type: ignore  # mypy is confused about this for some reason
-
         # mute user
         mute = Config.muted_role_id is not None
         if mute:
@@ -172,6 +166,12 @@ class FilterCog(BaseCog[State]):
                 timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
                 reason
             ))
+
+        # delete messages
+        if message.id not in (m.id for m in to_delete):
+            to_delete = [*to_delete, message]
+        logger.info(f'deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}')
+        tasks.extend(m.delete() for m in to_delete)  # type: ignore  # mypy is confused about this for some reason
 
         delete_res = await asyncio.gather(*tasks, return_exceptions=True)
         for exc in (e for e in delete_res if isinstance(e, Exception)):
