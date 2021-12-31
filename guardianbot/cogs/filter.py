@@ -44,6 +44,10 @@ def autocomp_checker(type: Type[BaseChecker] = BaseChecker) -> Callable[[types.A
     return autocomp
 
 
+def get_checker_param(type: Type[BaseChecker]) -> Any:
+    return commands.Param(autocomp=autocomp_checker(type), converter=convert_checker(type))
+
+
 class State(utils.StrictModel):
     report_channel: Optional[int] = None
     mute_minutes: int = 10
@@ -286,10 +290,9 @@ class FilterCog(BaseCog[State]):
     async def filter_add(
         self,
         ctx: types.AnyContext,
-        blocklist_: str = commands.Param(autocomp=autocomp_checker(ManualBaseChecker)),
+        blocklist: ManualBaseChecker = get_checker_param(ManualBaseChecker),
         input: str = commands.Param()
     ) -> None:
-        blocklist = await convert_checker(ManualBaseChecker)(ctx, blocklist_)
         logger.info(f'adding {input} to list')
         res = blocklist.entry_add(input)
         if res is True:
@@ -306,10 +309,9 @@ class FilterCog(BaseCog[State]):
     async def filter_remove(
         self,
         ctx: types.AnyContext,
-        blocklist_: str = commands.Param(autocomp=autocomp_checker(ManualBaseChecker)),
+        blocklist: ManualBaseChecker = get_checker_param(ManualBaseChecker),
         input: str = commands.Param()
     ) -> None:
-        blocklist = await convert_checker(ManualBaseChecker)(ctx, blocklist_)
         logger.info(f'removing {input} from list')
         if blocklist.entry_remove(input):
             await ctx.send(f'Successfully removed `{input}`')
@@ -323,10 +325,9 @@ class FilterCog(BaseCog[State]):
     async def filter_list(
         self,
         ctx: types.AnyContext,
-        blocklist_: str = commands.Param(autocomp=autocomp_checker(BaseChecker)),
+        blocklist: BaseChecker = get_checker_param(BaseChecker),
         raw: bool = False
     ) -> None:
-        blocklist = await convert_checker(BaseChecker)(ctx, blocklist_)
         if len(blocklist) == 0:
             await ctx.send('List contains no elements.')
             return

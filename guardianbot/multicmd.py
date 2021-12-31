@@ -96,13 +96,25 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
     ) -> _T:
         _cls = cast(Type[_MultiBase[_TCmd, _TSlashCmd]], cls)  # typing generic classmethods and return types correctly is basically impossible
 
-        # use slash command's `Param` defaults as classic command's defaults as well
+        # use slash command's `Param` values for classic commands as well
         def replace_defaults(p: inspect.Parameter) -> Dict[str, Any]:
-            # if parameter default is disnake's `ParamInfo`,
-            # set the value to `ParamInfo.default` instead
             if isinstance(p.default, commands.ParamInfo):
+                # move converter from param to annotation
+                annot = p.annotation
+                if p.default.converter:
+                    # wow I hate this
+                    annot = type(
+                        f'{p.name}_converter',
+                        (commands.Converter,),
+                        # drop `self` parameter
+                        {'convert': lambda *args: p.default.converter(*args[1:])}
+                    )()
+                # use param's default
                 def_val = p.default.default
-                return {'default': p.empty if def_val is ... else def_val}
+                return {
+                    'default': p.empty if def_val is ... else def_val,
+                    'annotation': annot,
+                }
             return {}
 
         cmd_func = utils.patch_parameters(func, replace_defaults)
@@ -114,6 +126,11 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
             return {}
 
         slash_func = utils.patch_parameters(func, replace_inter_annotation)
+        # fix converter signatures
+        for p in inspect.signature(slash_func).parameters.values():
+            d = p.default
+            if isinstance(d, commands.ParamInfo) and d.converter:
+                d.converter = utils.patch_parameters(d.converter, replace_inter_annotation)
 
         # create new instance with classic command and slash command
         inst = _cls(
