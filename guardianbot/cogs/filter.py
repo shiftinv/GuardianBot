@@ -6,7 +6,6 @@ import disnake
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 from disnake.ext import commands
-from pydantic import BaseModel
 
 
 from ._base import BaseCog, loop_error_handled, PermissionDecorator
@@ -45,7 +44,7 @@ def autocomp_checker(type: Type[BaseChecker] = BaseChecker) -> Callable[[types.A
     return autocomp
 
 
-class State(BaseModel):
+class State(utils.StrictModel):
     report_channel: Optional[int] = None
     mute_minutes: int = 10
     unfiltered_roles: Set[int] = set()

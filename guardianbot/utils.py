@@ -5,6 +5,7 @@ import re
 import sys
 import asyncio
 import inspect
+import pydantic
 import functools
 import contextlib
 from disnake.ext import commands
@@ -139,3 +140,9 @@ class dotdict(dict):  # type: ignore
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__  # type: ignore
     __delattr__ = dict.__delitem__  # type: ignore
+
+
+class StrictModel(pydantic.BaseModel):
+    class Config:
+        extra = pydantic.Extra.forbid
+        validate_assignment = True

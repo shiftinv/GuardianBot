@@ -2,19 +2,19 @@ import itertools
 import re
 import disnake
 import logging
+from pydantic import Field
 from datetime import timedelta
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from .. import utils
 from ._base import ManualBaseChecker, CheckResult
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Config:
+class Config(utils.StrictModel):
     interval_sec: int = 15
     repeat_count: int = 2  # TODO: limit range
 

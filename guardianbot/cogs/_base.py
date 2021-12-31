@@ -3,18 +3,17 @@ import aiohttp
 import disnake
 import functools
 from pathlib import Path
-from pydantic import BaseModel
 from typing import Any, Awaitable, Callable, Generic, List, Optional, Tuple, Type, TypeVar, cast, get_args
 from disnake.ext import commands, tasks
 
-from .. import error_handler, interactions, multicmd, types
+from .. import error_handler, interactions, multicmd, types, utils
 from ..config import Config
 
 
 logger = logging.getLogger(__name__)
 
 
-# no `Optional[BaseModel]` bound since narrowing optional typevar bounds is close to impossible
+# no `Optional[StrictModel]` bound since narrowing optional typevar bounds is close to impossible
 _TState = TypeVar('_TState')
 PermissionDecorator = Callable[[Any], Any]
 
@@ -50,8 +49,8 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
         if state_type is type(None):  # noqa: E721
             state_type = None
         else:
-            assert issubclass(state_type, BaseModel), f'state type must inherit from `pydantic.BaseModel` (got \'{state_type}\')'
-        self.__state_type: Optional[Type[BaseModel]] = state_type
+            assert issubclass(state_type, utils.StrictModel), f'state type must inherit from `StrictModel` (got \'{state_type}\')'
+        self.__state_type: Optional[Type[utils.StrictModel]] = state_type
 
         self._read_state()
 
@@ -72,7 +71,7 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             return
 
         self._state_path.parent.mkdir(parents=True, exist_ok=True)
-        self._state_path.write_text(cast(BaseModel, self.state).json(indent=4))
+        self._state_path.write_text(cast(utils.StrictModel, self.state).json(indent=4))
 
     # checks
 
