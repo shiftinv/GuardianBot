@@ -1,5 +1,6 @@
 import io
 import asyncio
+import json
 import logging
 import disnake
 from datetime import datetime, timedelta
@@ -414,6 +415,30 @@ class FilterCog(BaseCog[State]):
                 for role_id in self.state.unfiltered_roles
             )
             await ctx.send(f'```\nunfiltered_roles = {{{roles}}}\n```')
+
+    def _read_state(self) -> None:
+        with self._state_path.open('r') as f:
+            data = json.load(f)
+
+        is_old = False
+        if isinstance(r := data.get('unfiltered_roles'), dict) and '$__set' in r:
+            # strip '$__set'
+            is_old = True
+            data['unfiltered_roles'] = data['unfiltered_roles']['$__set']
+        if '_muted_users' in data:
+            # rename '_muted_users' to 'muted_users', strip nested '$__datetime'
+            is_old = True
+            m: Dict[str, Optional[Dict[str, Any]]] = data.pop('_muted_users')
+            data['muted_users'] = m
+            for k, v in m.items():
+                m[k] = v['$__datetime'] if v else None
+
+        if is_old:
+            with self._state_path.open('w') as f:
+                json.dump(data, f)
+            logger.info('Migrated state to new format')
+
+        return super()._read_state()
 
 
 def setup(bot: types.Bot) -> None:

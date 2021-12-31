@@ -44,7 +44,7 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             raise TypeError('expected bot to be (a subclass of) `interactions.CustomSyncBot`')
         self._bot = bot
 
-        self.__state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
+        self._state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
         # get `_TState` at runtime
         state_type = get_args(type(self).__orig_bases__[0])[0]  # type: ignore
         if state_type is type(None):  # noqa: E721
@@ -60,8 +60,8 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             self.state = None  # type: ignore
             return
 
-        if self.__state_path.exists():
-            state = self.__state_type.parse_file(self.__state_path)
+        if self._state_path.exists():
+            state = self.__state_type.parse_file(self._state_path)
         else:
             state = self.__state_type()
         self.state = cast(_TState, state)  # see `_TState` comment above
@@ -71,8 +71,8 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
         if self.__state_type is None:
             return
 
-        self.__state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.__state_path.write_text(cast(BaseModel, self.state).json(indent=4))
+        self._state_path.parent.mkdir(parents=True, exist_ok=True)
+        self._state_path.write_text(cast(BaseModel, self.state).json(indent=4))
 
     # checks
 
