@@ -51,8 +51,6 @@ class State(BaseModel):
     unfiltered_roles: Set[int] = set()
     spam_checker_config: SpamCheckerConfig = SpamCheckerConfig()
 
-    muted_users: Dict[int, Optional[datetime]] = {}
-
 
 class FilterCog(BaseCog[State]):
     def __init__(self, bot: types.Bot):
@@ -74,8 +72,6 @@ class FilterCog(BaseCog[State]):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         logger.debug('starting tasks')
-        if Config.muted_role_id and not self._unmute_expired.is_running():
-            self._unmute_expired.start()
         if not self._update_checkers.is_running():
             self._update_checkers.start()
 
@@ -97,7 +93,6 @@ class FilterCog(BaseCog[State]):
 
     def cog_unload(self) -> None:
         logger.debug('stopping tasks')
-        self._unmute_expired.stop()
         self._update_checkers.stop()
 
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
@@ -115,22 +110,6 @@ class FilterCog(BaseCog[State]):
         )
         for exc in (e for e in results if isinstance(e, Exception)):
             await error_handler.handle_task_error(self._bot, exc)
-
-    @loop_error_handled(minutes=1)
-    async def _unmute_expired(self) -> None:
-        role = self._get_muted_role()
-
-        for user_id, expiry in self.state.muted_users.copy().items():
-            if expiry and expiry < utils.utcnow():
-                logger.info(f'unmuting {user_id}')
-
-                member = self._guild.get_member(int(user_id))
-                if member:
-                    await member.remove_roles(types.to_snowflake(role), reason='mute expired')
-                else:
-                    logger.info('user left guild')
-                self.state.muted_users.pop(user_id)
-                self._write_state()
 
     @commands.Cog.listener()
     async def on_message(self, message: disnake.Message) -> None:
@@ -240,14 +219,10 @@ class FilterCog(BaseCog[State]):
         logger.info(f'successfully blocked message {message.id}')
 
     async def _mute_user(self, user: disnake.Member, duration: Optional[timedelta], reason: Optional[str]) -> None:
-        role = self._get_muted_role()
-
-        await user.add_roles(types.to_snowflake(role), reason=reason)
-        self.state.muted_users[user.id] = (utils.utcnow() + duration) if duration else None
-        self._write_state()
-
-        # sanity check to make sure task wasn't stopped for some reason
-        assert self._unmute_expired.is_running()
+        if duration is None:
+            await user.add_roles(types.to_snowflake(self._get_muted_role()), reason=reason)
+        else:
+            await user.timeout(duration=duration, reason=reason)
 
     def _get_muted_role(self) -> disnake.Role:
         assert Config.muted_role_id
@@ -267,12 +242,8 @@ class FilterCog(BaseCog[State]):
         description='Unmutes a user'
     )
     async def unmute(self, ctx: types.AnyContext, user: disnake.Member) -> None:
-        # remove role from user
         await user.remove_roles(types.to_snowflake(self._get_muted_role()))
-
-        # remove user from muted list
-        self.state.muted_users.pop(user.id, None)
-        self._write_state()
+        await user.timeout(duration=None)
 
         await ctx.send(f'Unmuted {str(user)}/{user.id}')
 
@@ -280,11 +251,19 @@ class FilterCog(BaseCog[State]):
         description='Lists all currently muted users'
     )
     async def muted(self, ctx: types.AnyContext) -> None:
-        if self.state.muted_users:
+        # TODO: this is inefficient in large guilds
+        muted: Dict[disnake.Member, Optional[datetime]] = {}
+        for m in self._guild.members:
+            if disnake.utils.get(m.roles, id=Config.muted_role_id):
+                muted[m] = None
+            elif m.current_timeout:
+                muted[m] = m.current_timeout
+
+        if muted:
             desc = '**name**  -  **expiry**\n'
             desc += '\n'.join(
-                f'<@!{id}>: {disnake.utils.format_dt(expiry) if expiry else "-"}'
-                for id, expiry in self.state.muted_users.items()
+                f'{member.mention}: {disnake.utils.format_dt(expiry) if expiry else "-"}'
+                for member, expiry in muted.items()
             )
         else:
             desc = 'none'
