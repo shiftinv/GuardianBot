@@ -51,8 +51,7 @@ class State(BaseModel):
     unfiltered_roles: Set[int] = set()
     spam_checker_config: SpamCheckerConfig = SpamCheckerConfig()
 
-    # using str instead of int since json only supports string keys
-    muted_users: Dict[str, Optional[datetime]] = {}
+    muted_users: Dict[int, Optional[datetime]] = {}
 
 
 class FilterCog(BaseCog[State]):
@@ -244,7 +243,7 @@ class FilterCog(BaseCog[State]):
         role = self._get_muted_role()
 
         await user.add_roles(types.to_snowflake(role), reason=reason)
-        self.state.muted_users[str(user.id)] = (utils.utcnow() + duration) if duration else None
+        self.state.muted_users[user.id] = (utils.utcnow() + duration) if duration else None
         self._write_state()
 
         # sanity check to make sure task wasn't stopped for some reason
@@ -272,7 +271,7 @@ class FilterCog(BaseCog[State]):
         await user.remove_roles(types.to_snowflake(self._get_muted_role()))
 
         # remove user from muted list
-        self.state.muted_users.pop(str(user.id), None)
+        self.state.muted_users.pop(user.id, None)
 
         await ctx.send(f'Unmuted {str(user)}/{user.id}')
 
