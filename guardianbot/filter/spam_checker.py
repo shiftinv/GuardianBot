@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Config(utils.StrictModel):
     interval_sec: int = 15
-    repeat_count: int = 2  # TODO: limit range
+    repeat_count: int = Field(2, gt=0)
 
 
 class SpamChecker(ManualBaseChecker):
