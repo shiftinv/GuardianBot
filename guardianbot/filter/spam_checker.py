@@ -72,7 +72,7 @@ class SpamChecker(ManualBaseChecker):
                 if len(hist) >= self.config.repeat_count:
                     diff = (created - hist[0].created_at).seconds
                     logger.debug(f'{self.config.repeat_count} messages within {diff} seconds')
-                    return CheckResult(f'detected spam: `{match.group()}` (regex: `{r}`)', messages=hist)
+                    return CheckResult(f'detected spam: `{match.group()}` (regex: `{r}`)', messages=hist[::-1])
 
                 break  # don't continue searching since spam detection is based on message content, not the specific regex that matched
         return None
