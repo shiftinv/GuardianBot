@@ -272,6 +272,7 @@ class FilterCog(BaseCog[State]):
 
         # remove user from muted list
         self.state.muted_users.pop(user.id, None)
+        self._write_state()
 
         await ctx.send(f'Unmuted {str(user)}/{user.id}')
 
