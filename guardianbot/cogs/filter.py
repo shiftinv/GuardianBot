@@ -234,10 +234,13 @@ class FilterCog(BaseCog[State]):
         return role
 
     @multicmd.command(
-        description='Mutes a user'
+        description='Mutes a user (temporarily or permanently)'
     )
     async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: Optional[str] = None) -> None:
         duration_td = await utils.convert_timedelta(ctx, duration) if duration else None
+        if duration_td and duration_td > timedelta(days=28):
+            await ctx.send('Failed to mute user, temporary mute maximum is 28 days')
+            return
         await self._mute_user(user, duration_td, f'requested by {str(ctx.author)} ({ctx.author.id})')
         await ctx.send(f'Muted {str(user)}/{user.id}')
 
