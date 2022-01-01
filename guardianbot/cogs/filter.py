@@ -395,6 +395,30 @@ class FilterCog(BaseCog[State]):
             )
             await ctx.send(f'```\nunfiltered_roles = {{{roles}}}\n```')
 
+    @filter_config.command(
+        name='spam_interval_sec',
+        help='Sets/shows the length of the spam interval in seconds'
+    )
+    async def filter_config_spam_interval_sec(self, ctx: types.Context, seconds: Optional[int] = None) -> None:
+        if seconds is not None:
+            self.state.spam_checker_config.interval_sec = seconds
+            self._write_state()
+            await ctx.send(f'Set spam interval to {seconds}sec')
+        else:
+            await ctx.send(f'```\nspam_interval_sec = {self.state.spam_checker_config.interval_sec}\n```')
+
+    @filter_config.command(
+        name='spam_repeat_count',
+        help='Sets/shows the number of required repetitions within the interval for a message to be considered spam'
+    )
+    async def filter_config_spam_repeat_count(self, ctx: types.Context, count: Optional[int] = None) -> None:
+        if count is not None:
+            self.state.spam_checker_config.repeat_count = count
+            self._write_state()
+            await ctx.send(f'Set spam repeat count to {count}')
+        else:
+            await ctx.send(f'```\nspam_repeat_count = {self.state.spam_checker_config.repeat_count}\n```')
+
     def _read_state(self) -> None:
         with self._state_path.open('r') as f:
             data: Dict[str, Any] = json.load(f)
