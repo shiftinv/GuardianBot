@@ -31,6 +31,7 @@ bot = interactions.CustomSyncBot(
     sync_commands_debug=Config.debug,
     sync_permissions=True,
     reload=utils.debugger_active(),
+    allowed_mentions=disnake.AllowedMentions.none(),
 )
 
 

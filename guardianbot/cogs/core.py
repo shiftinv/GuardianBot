@@ -78,7 +78,8 @@ class CoreCog(BaseCog[None]):
         await channel.send(text)
 
         await ctx.send(
-            f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```'
+            f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```',
+            allowed_mentions=disnake.AllowedMentions.all().merge(disnake.AllowedMentions(everyone=False)),
         )
 
     @commands.command(hidden=True)
