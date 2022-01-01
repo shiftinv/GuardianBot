@@ -337,13 +337,14 @@ class FilterCog(BaseCog[State]):
 
         items = list(blocklist) if raw else sorted(blocklist)
         s = f'List contains {len(items)} element(s):\n'
+        lines = '\n'.join(items)
 
         kwargs: Dict[str, Any] = {}
-        if len(items) > 20:  # arbitrary line limit for switching to attachments
+        if len(lines) > 1900:
             name = next(k for k, v in self.checkers.items() if v is blocklist)
-            kwargs['file'] = disnake.File(io.BytesIO('\n'.join(items).encode()), f'{name}.txt')
+            kwargs['file'] = disnake.File(io.BytesIO(lines.encode()), f'{name}.txt')
         else:
-            s += '```\n' + '\n'.join(items) + '\n```'
+            s += '```\n' + lines + '\n```'
 
         await ctx.send(s, **kwargs)
 
