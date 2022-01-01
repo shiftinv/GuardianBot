@@ -46,6 +46,8 @@ def __get_value(field):
     try:
         val_str = os.environ[env_name]
         if is_list:
+            if not val_str:
+                return []
             return list(map(field_type, val_str.split(',')))
         else:
             return field_type(val_str)
