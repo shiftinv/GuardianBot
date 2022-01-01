@@ -34,7 +34,7 @@ Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-base
 
 **Note: all commands are also available as prefix commands, i.e. using `?` instead of `/`.**
 
-The [filter](./guardianbot/cogs/filter.py) cog handles four types of filter lists, which are checked in order:
+The [filter](./guardianbot/cogs/filter.py) cog handles five types of filter lists, which are checked in order:
 - `strings`, contains keywords which are matched literally (case sensitive)
 - `regex`, contains regular expressions to filter with
 - `bad_domains`, which is automatically updated from Discord's bad-domains hash list, and cannot be modified manually
