@@ -6,8 +6,8 @@ Yet another Discord anti-spam bot, with keyword/regex blocklists and DNS/IP-base
 ## Installation
 
 1. Create a bot in the developer portal, enable all privileged intents, and copy the token as usual
-2. Invite the bot to a server, with at least the following permissions:  
-   `Manage Roles`, `View Channels`, `Moderate Members/Time Out Members`, `Manage Messages`
+2. Invite the bot to a server, with the `bot` and `applications.commands` scopes, and with at least the following permissions:  
+   `Manage Roles`, `View Channels`, `Moderate Members/Time Out Members`, `Send Messages`, and `Manage Messages`
 2. Copy `docker-compose.yml.skel` to `docker-compose.yml`, and fill in the environment variables marked with `<EMPTY>`
     - `MOD_ROLE_IDS` is primarily cosmetic and only used to restrict slash commands to specific roles. Any user will still always require the `Manage Messages` permission for commands, regardless of this value
 3. Create the data directory (`_data` by default, see `docker-compose.yml`), and update the permissions (`chmod 777 _data` or `chown 1000:1000 _data`)

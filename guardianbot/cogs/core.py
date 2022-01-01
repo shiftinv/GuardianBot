@@ -94,6 +94,7 @@ class CoreCog(BaseCog[None]):
                 send_messages=True,
                 manage_messages=True,
                 manage_roles=True,
+                moderate_members=True,
             ),
             scopes=scopes,
         )
