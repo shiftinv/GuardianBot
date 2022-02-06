@@ -162,14 +162,13 @@ class FilterCog(BaseCog[State]):
         logger.info(f'blocking message(s) by {str(author)}/{author.id} (\'{message.content}\') - {reason}')
 
         tasks: List[Awaitable[Any]] = []
+
         # mute user
-        mute = Config.muted_role_id is not None
-        if mute:
-            tasks.append(self._mute_user(
-                author,
-                timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
-                reason
-            ))
+        tasks.append(self._mute_user(
+            author,
+            timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
+            reason
+        ))
 
         # delete messages
         if message.id not in (m.id for m in to_delete):
@@ -185,13 +184,12 @@ class FilterCog(BaseCog[State]):
 
         # send notification to channel
         if self.state.report_channel:
-            prefix = 'Muted' if mute else 'Blocked message by'
             embed = disnake.Embed(
                 color=0x992e22,
                 description=author.mention,
                 timestamp=utils.utcnow()
             ).set_author(
-                name=f'{prefix} {str(author)} ({author.id})',
+                name=f'Muted {str(author)} ({author.id})',
                 icon_url=author.display_avatar.url
             )
 
@@ -210,7 +208,7 @@ class FilterCog(BaseCog[State]):
                 name='Reason',
                 value=reason
             )
-            if mute and self.state.mute_minutes:
+            if self.state.mute_minutes:
                 embed.add_field(
                     name='Duration',
                     value=f'{self.state.mute_minutes}min'
@@ -223,20 +221,19 @@ class FilterCog(BaseCog[State]):
 
     async def _mute_user(self, user: disnake.Member, duration: Optional[timedelta], reason: Optional[str]) -> None:
         if duration is None:
-            await user.add_roles(types.to_snowflake(self._get_muted_role()), reason=reason)
+            role = self._get_muted_role()
+            assert role, 'can\'t mute permanently without a mute role set'
+            await user.add_roles(types.to_snowflake(role), reason=reason)
         else:
             await user.timeout(duration=duration, reason=reason)
 
-    def _get_muted_role(self) -> disnake.Role:
-        assert Config.muted_role_id
-        role = self._guild.get_role(Config.muted_role_id)
-        assert role
-        return role
+    def _get_muted_role(self) -> Optional[disnake.Role]:
+        return self._guild.get_role(Config.muted_role_id) if Config.muted_role_id else None
 
     @multicmd.command(
         description='Mutes a user (temporarily or permanently)'
     )
-    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: Optional[str] = None) -> None:
+    async def mute(self, ctx: types.AnyContext, user: disnake.Member, duration: Optional[str] = commands.Param(... if Config.muted_role_id is None else None)) -> None:
         duration_td = await utils.convert_timedelta(ctx, duration) if duration else None
         if duration_td and duration_td > timedelta(days=28):
             await ctx.send('Failed to mute user, temporary mute maximum is 28 days')
@@ -248,7 +245,8 @@ class FilterCog(BaseCog[State]):
         description='Unmutes a user'
     )
     async def unmute(self, ctx: types.AnyContext, user: disnake.Member) -> None:
-        await user.remove_roles(types.to_snowflake(self._get_muted_role()))
+        if role := self._get_muted_role():
+            await user.remove_roles(types.to_snowflake(role))
         await user.timeout(duration=None)
 
         await ctx.send(f'Unmuted {str(user)}/{user.id}')
