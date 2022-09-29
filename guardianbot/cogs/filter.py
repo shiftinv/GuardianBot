@@ -21,7 +21,7 @@ from typing import (
 import disnake
 from disnake.ext import commands
 
-from .. import checks, error_handler, interactions, multicmd, types, utils
+from .. import error_handler, multicmd, types, utils
 from ..config import Config
 from ..filter import (
     AllowList,
@@ -36,7 +36,7 @@ from ..filter import (
     SpamChecker,
     SpamCheckerConfig,
 )
-from ._base import BaseCog, PermissionDecorator, loop_error_handled
+from ._base import BaseCog, loop_error_handled
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,9 @@ logger = logging.getLogger(__name__)
 _TChecker = TypeVar("_TChecker", bound=BaseChecker)
 
 
-def convert_checker(type: Type[_TChecker] = BaseChecker) -> Callable[[types.AnyContext, str], Coroutine[Any, Any, _TChecker]]:  # type: ignore[assignment]
+def convert_checker(
+    type: Type[_TChecker] = BaseChecker,
+) -> Callable[[types.AnyContext, str], Coroutine[Any, Any, _TChecker]]:
     async def convert(ctx: types.AnyContext, arg: str) -> _TChecker:
         cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
         assert isinstance(cog, FilterCog)
@@ -53,7 +55,7 @@ def convert_checker(type: Type[_TChecker] = BaseChecker) -> Callable[[types.AnyC
             err = f"Invalid argument. Valid choices: {list(checkers.keys())}"
             await ctx.send(err)
             raise utils.suppress_help(commands.BadArgument(err))
-        return checkers[arg]
+        return checkers[arg]  # type: ignore
 
     return convert
 
@@ -80,7 +82,10 @@ class State(utils.StrictModel):
     spam_checker_config: SpamCheckerConfig = SpamCheckerConfig()
 
 
-class FilterCog(BaseCog[State]):
+class FilterCog(
+    BaseCog[State],
+    slash_command_attrs={"default_member_permissions": disnake.Permissions(manage_messages=True)},
+):
     def __init__(self, bot: types.Bot):
         super().__init__(bot)
 
@@ -103,35 +108,13 @@ class FilterCog(BaseCog[State]):
         if not self._update_checkers.is_running():
             self._update_checkers.start()
 
-        # hacky self-test because I don't trust myself
-        async with utils.catch_and_exit(self._bot):
-
-            async def fake_can_run(*args: Any) -> bool:
-                return True
-
-            async def fake_is_owner(*args: Any) -> bool:
-                return False
-
-            for perm in (True, False):
-                ctx: Any = utils.dotdict()
-                ctx.bot = utils.dotdict(can_run=fake_can_run, is_owner=fake_is_owner)
-                ctx.guild = utils.dotdict(id=Config.guild_id)
-                ctx.author = utils.dotdict(
-                    guild_permissions=disnake.Permissions(manage_messages=perm)
-                )
-                cmd = next(c for c in self.__cog_commands__ if c.name == "filter")
-                assert (await cmd.can_run(ctx)) is perm, f"expected result to be {perm}"
-
     def cog_unload(self) -> None:
         logger.debug("stopping tasks")
         self._update_checkers.stop()
 
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
-        return await checks.manage_messages(ctx)
-
-    @staticmethod
-    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
-        return [interactions.allow_mod], False
+        assert isinstance(ctx.author, disnake.Member)
+        return ctx.author.guild_permissions.manage_messages
 
     @loop_error_handled(hours=2)
     async def _update_checkers(self) -> None:
@@ -206,7 +189,7 @@ class FilterCog(BaseCog[State]):
         if message.id not in (m.id for m in to_delete):
             to_delete = [*to_delete, message]
         logger.info(f"deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}")
-        tasks.extend(m.delete() for m in to_delete)  # type: ignore  # mypy is confused about this for some reason
+        tasks.extend(m.delete() for m in to_delete)
 
         delete_res = await asyncio.gather(*tasks, return_exceptions=True)
         for exc in (e for e in delete_res if isinstance(e, Exception)):
@@ -255,7 +238,7 @@ class FilterCog(BaseCog[State]):
     def _get_muted_role(self) -> Optional[disnake.Role]:
         return self._guild.get_role(Config.muted_role_id) if Config.muted_role_id else None
 
-    @multicmd.command(description="Mutes a user (temporarily or permanently)")
+    @multicmd.command(description="Mutes a user")
     async def mute(
         self,
         ctx: types.AnyContext,
@@ -363,7 +346,7 @@ class FilterCog(BaseCog[State]):
     # config stuff
 
     @filter._command.group(name="config")
-    async def filter_config(self, ctx: types.AnyContext) -> None:
+    async def filter_config(self, ctx: types.Context) -> None:
         pass
 
     @filter_config.command(name="report_channel", help="Sets/shows the channel to send reports in")

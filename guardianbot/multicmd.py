@@ -30,6 +30,7 @@ def command(
 
 
 _TCog = TypeVar("_TCog", bound=commands.Cog)
+CmdGroupCallback = Callable[[_TCog, types.AnyContext], types.NoneCoro]
 
 
 def group(
@@ -38,8 +39,8 @@ def group(
     description: Optional[str] = None,
     cmd_group_kwargs: Optional[Dict[str, Any]] = None,
     slash_kwargs: Optional[Dict[str, Any]] = None,
-) -> Callable[[Callable[[_TCog, types.AnyContext], types.NoneCoro]], "_MultiGroup"]:
-    def wrap(f: Callable[[_TCog, types.AnyContext], types.NoneCoro]) -> _MultiGroup:
+) -> Callable[[CmdGroupCallback[_TCog]], "_MultiGroup"]:
+    def wrap(f: CmdGroupCallback[_TCog]) -> _MultiGroup:
         return _MultiGroup.create(
             commands.group,
             commands.slash_command,
@@ -78,8 +79,8 @@ async def edit_response(ctx: types.AnyContext, **kwargs: Any) -> None:
 _T = TypeVar("_T")
 _DecoratorType = Callable[..., Callable[[types.HandlerType], _T]]
 
-_AnyCmd = commands.Command[commands.Cog, Any, None]  # type: ignore[type-arg]
-_AnyGroup = commands.Group[commands.Cog, Any, None]  # type: ignore[type-arg]
+_AnyCmd = commands.Command[Any, Any, None]
+_AnyGroup = commands.Group[Any, Any, None]
 _TCmd = TypeVar("_TCmd", _AnyCmd, _AnyGroup)
 _TSlashCmd = TypeVar(
     "_TSlashCmd", commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand
@@ -119,7 +120,7 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
                         f"{p.name}_converter",
                         (commands.Converter,),
                         # drop `self` parameter
-                        {"convert": lambda *args: p.default.converter(*args[1:])},
+                        {"convert": lambda *args: p.default.converter(*args[1:])},  # type: ignore
                     )()
                 # use param's default
                 def_val = p.default.default
@@ -219,8 +220,8 @@ class _MultiGroup(_MultiGroupBase[commands.InvokableSlashCommand]):
         description: Optional[str] = None,  # note: this only applies to "standard" commands
         cmd_group_kwargs: Optional[Dict[str, Any]] = None,
         slash_subgroup_kwargs: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[Callable[[_TCog, types.AnyContext], types.NoneCoro]], "_MultiSubGroup"]:
-        def wrap(f: Callable[[_TCog, types.AnyContext], types.NoneCoro]) -> _MultiSubGroup:
+    ) -> Callable[[CmdGroupCallback[_TCog]], "_MultiSubGroup"]:
+        def wrap(f: CmdGroupCallback[_TCog]) -> _MultiSubGroup:
             return _MultiSubGroup.create(
                 self._command.group,
                 self._slash_command.sub_command_group,
@@ -252,7 +253,7 @@ class _MultiCmdMeta(commands.CogMeta):
                     print(f"patching command and slash command for '{name}.{k}'")
 
                 # add command and slash command to namespace
-                for suffix, cmd in (("cmd", v._command), ("slash", v._slash_command)):
+                for suffix, cmd in (("cmd", v._command), ("slash", v._slash_command)):  # type: ignore
                     new_key = f"_{k}_{suffix}"
                     assert new_key not in attrs
                     attrs[new_key] = cmd

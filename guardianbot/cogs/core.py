@@ -4,13 +4,13 @@ import sys
 import textwrap
 import traceback
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import disnake
 import humanize
 from disnake.ext import commands
 
-from .. import checks, interactions, multicmd, types, utils
+from .. import multicmd, types, utils
 from ..config import Config
 from ._base import BaseCog
 
@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 class CoreCog(BaseCog[None]):
     _start_time: Optional[datetime] = None
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         self._start_time = utils.utcnow()
 
     @multicmd.command(description="Shows information about the bot")
@@ -33,7 +32,7 @@ class CoreCog(BaseCog[None]):
                 name="Commit",
                 value=Config.git_commit,
             )
-        embed.add_field(name="discord.py", value=disnake.__version__)
+        embed.add_field(name="disnake", value=disnake.__version__)
         embed.add_field(
             name="Python",
             value=".".join(map(str, sys.version_info[:3])),
@@ -49,23 +48,27 @@ class CoreCog(BaseCog[None]):
 
         await ctx.send(embed=embed)
 
-    @interactions.allow(owner=True)
-    @multicmd.command(
+    @commands.command(
         name="restart" if utils.is_docker() else "shutdown",
         description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot',
-        slash_kwargs=dict(default_permission=False),
+        hidden=True,
     )
     @commands.is_owner()
     async def shutdown(self, ctx: types.AnyContext) -> None:
         await self._bot.close()
 
-    @interactions.allow_mod
     @multicmd.command(
         description="Sends a message in another channel using the bot",
-        slash_kwargs=dict(default_permission=False),
+        slash_kwargs={"default_member_permissions": disnake.Permissions(manage_messages=True)},
     )
-    @commands.check(checks.manage_messages)
-    async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
+    @commands.has_permissions(manage_messages=True)
+    async def say(
+        self,
+        ctx: types.AnyContext,
+        channel: Union[disnake.TextChannel, disnake.VoiceChannel],
+        *,
+        text: str,
+    ) -> None:
         await channel.send(text)
 
         await ctx.send(

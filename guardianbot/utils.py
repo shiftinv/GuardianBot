@@ -126,13 +126,15 @@ TCallable = TypeVar("TCallable", bound=Callable[..., Any])
 
 def copy_patch_signature(func: TCallable, sig: inspect.Signature) -> TCallable:
     # copy function
-    new_func = _types.FunctionType(func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__)  # type: ignore[attr-defined]
+    new_func = _types.FunctionType(
+        func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__
+    )
     new_func = functools.update_wrapper(new_func, func)
-    new_func.__kwdefaults__ = func.__kwdefaults__  # type: ignore
+    new_func.__kwdefaults__ = func.__kwdefaults__
     del new_func.__wrapped__  # type: ignore
 
     # set signature
-    new_func.__signature__ = sig  # type: ignore[attr-defined]
+    new_func.__signature__ = sig  # type: ignore
     return new_func  # type: ignore
 
 
@@ -144,8 +146,8 @@ def patch_parameters(
     return copy_patch_signature(func, sig.replace(parameters=new_p))
 
 
-class dotdict(dict):  # type: ignore
-    __getattr__ = dict.get
+class dotdict(Dict[_T, _U]):
+    __getattr__ = dict.get  # type: ignore
     __setattr__ = dict.__setitem__  # type: ignore
     __delattr__ = dict.__delitem__  # type: ignore
 

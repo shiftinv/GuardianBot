@@ -2,13 +2,12 @@ import functools
 import logging
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Awaitable,
     Callable,
+    Coroutine,
     Generic,
-    List,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     cast,
@@ -19,7 +18,7 @@ import aiohttp
 import disnake
 from disnake.ext import commands, tasks
 
-from .. import error_handler, interactions, multicmd, types, utils
+from .. import error_handler, multicmd, types, utils
 from ..config import Config
 
 logger = logging.getLogger(__name__)
@@ -27,31 +26,13 @@ logger = logging.getLogger(__name__)
 
 # no `Optional[StrictModel]` bound since narrowing optional typevar bounds is close to impossible
 _TState = TypeVar("_TState")
-PermissionDecorator = Callable[[Any], Any]
 
 
-class _BaseMeta(multicmd._MultiCmdMeta):
-    def __init__(cls: Type["BaseCog"], *args: Any, **kwargs: Any):  # type: ignore
-        super().__init__(*args, **kwargs)  # type: ignore
-        for cmd in cls.__cog_app_commands__:
-            if isinstance(cmd, commands.InvokableApplicationCommand) and not isinstance(
-                cmd, (commands.SubCommand, commands.SubCommandGroup)
-            ):
-                decorators, default = cls.cog_guild_permissions()
-                if default is not None:
-                    cmd.body.default_permission = default
-                for dec in decorators:
-                    r = dec(cmd)
-                    assert r is cmd
-
-
-class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
+class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
     state: _TState
     _bot: types.Bot
 
     def __init__(self, bot: types.Bot):
-        if not isinstance(bot, interactions.CustomSyncBot):
-            raise TypeError("expected bot to be (a subclass of) `interactions.CustomSyncBot`")
         self._bot = bot
 
         self._state_path = Path(Config.data_dir) / "state" / f"{type(self).__name__.lower()}.json"
@@ -104,10 +85,6 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
         return True
 
-    @staticmethod
-    def cog_guild_permissions() -> Tuple[List[PermissionDecorator], Optional[bool]]:
-        return [], None
-
     # other stuff
 
     @property
@@ -122,15 +99,17 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
             timeout=aiohttp.ClientTimeout(total=30),
             connector=self._bot.http.connector,
         )
-        session._request = functools.partial(session._request, proxy=self._bot.http.proxy)  # type: ignore[assignment]
+        session._request = functools.partial(session._request, proxy=self._bot.http.proxy)
         return session
 
 
 _CogT = TypeVar("_CogT", bound=BaseCog[Any])
-_LoopFunc = Callable[[_CogT], Awaitable[None]]
+_LoopFunc = Callable[[_CogT], Coroutine[Any, Any, None]]
 
 
-def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[_LoopFunc[_CogT]]]:
+def _loop_error_handled(
+    **kwargs: Any,
+) -> Callable[[_LoopFunc[_CogT]], tasks.Loop[_LoopFunc[_CogT]]]:
     def decorator(f: _LoopFunc[_CogT]) -> tasks.Loop[_LoopFunc[_CogT]]:
         @functools.wraps(f)
         async def wrap(self: _CogT) -> None:
@@ -142,3 +121,9 @@ def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop
         return tasks.loop(**kwargs)(wrap)
 
     return decorator
+
+
+if TYPE_CHECKING:
+    loop_error_handled = tasks.loop
+else:
+    loop_error_handled = _loop_error_handled

@@ -23,13 +23,20 @@ reportUnnecessaryTypeIgnoreComment = true
 
 # it's unlikely that these will ever be enabled
 # reportOverlappingOverload = false
-# reportPrivateUsage = false
+reportPrivateUsage = false
 # reportUnnecessaryIsInstance = false
 # reportFunctionMemberAccess = false
-# reportMissingTypeStubs = false
+reportMissingTypeStubs = false
 # reportUnusedFunction = false
 # reportUnusedClass = false
 # reportConstantRedefinition = false
-# reportImportCycles = false
+reportImportCycles = false
 # reportIncompatibleMethodOverride = false
 # reportIncompatibleVariableOverride = false
+
+# FIXME: aiodns doesn't have type stubs
+useLibraryCodeForTypes = true
+
+# these are largely due to missing type hints
+reportUnknownMemberType = false
+reportUnknownArgumentType = false

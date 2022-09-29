@@ -52,14 +52,12 @@ async def handle_task_error(bot: types.Bot, exc: Exception) -> None:
 
 
 def init(bot: types.Bot) -> None:
-    @bot.event
     async def on_error(event: str, *args: Any, **kwargs: Any) -> None:
         exc = sys.exc_info()[1]
         exc = exc if isinstance(exc, Exception) else None
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_error(event, *args, **kwargs)
 
-    @bot.event
     async def on_command_error(ctx: types.Context, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_command_error(ctx, exc)
@@ -76,22 +74,25 @@ def init(bot: types.Bot) -> None:
         elif isinstance(exc, commands.errors.CommandOnCooldown):
             await ctx.message.add_reaction("🕒")
 
-    @bot.event
     async def on_slash_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_slash_command_error(inter, exc)
 
-    @bot.event
     async def on_user_command_error(inter: types.AppCI, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_user_command_error(inter, exc)
 
-    @bot.event
     async def on_message_command_error(
         inter: types.AppCI, exc: commands.errors.CommandError
     ) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_message_command_error(inter, exc)
+
+    bot.event(on_error)
+    bot.event(on_command_error)
+    bot.event(on_slash_command_error)
+    bot.event(on_user_command_error)
+    bot.event(on_message_command_error)
 
 
 # oof

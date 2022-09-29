@@ -2,7 +2,7 @@ import asyncio
 import logging
 import socket
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import Dict, List, Optional, Set, Union
 
 import aiodns
 import disnake
@@ -10,12 +10,14 @@ import disnake
 from .. import utils
 from ._base import CheckResult, ManualBaseChecker
 
+__all__ = ["IPChecker"]
+
 logger = logging.getLogger(__name__)
 
 
 class IPChecker(ManualBaseChecker):
     def __init__(self):
-        self._resolver = aiodns.DNSResolver(["1.1.1.1"])
+        self._resolver: aiodns.DNSResolver = aiodns.DNSResolver(["1.1.1.1"])
 
         self._networks: Set[IPv4Network] = set()
         self._cache: Dict[str, List[str]] = {}
@@ -26,12 +28,11 @@ class IPChecker(ManualBaseChecker):
         if host in self._cache:
             return self._cache[host]
 
+        addrs: List[str] = []
         try:
-            addrs = cast(
-                List[str], (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
-            )
+            addrs = (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
         except Exception:
-            addrs = []
+            pass
 
         self._cache[host] = addrs
         return addrs

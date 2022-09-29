@@ -4,6 +4,8 @@ import disnake
 
 from ._base import CheckResult, ManualBaseChecker
 
+__all__ = ["ListChecker"]
+
 
 class ListChecker(ManualBaseChecker):
     def __init__(self):

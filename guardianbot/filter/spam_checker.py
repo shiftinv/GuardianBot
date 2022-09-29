@@ -6,21 +6,23 @@ from datetime import datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import disnake
-from pydantic import Field
+import pydantic
 
 from .. import utils
 from ._base import CheckResult, ManualBaseChecker
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["SpamCheckerConfig", "SpamChecker"]
 
-class Config(utils.StrictModel):
+
+class SpamCheckerConfig(utils.StrictModel):
     interval_sec: int = 15
-    repeat_count: int = Field(2, gt=0)
+    repeat_count: pydantic.PositiveInt = 2
 
 
 class SpamChecker(ManualBaseChecker):
-    def __init__(self, config: Config):
+    def __init__(self, config: SpamCheckerConfig):
         super().__init__("blocklist_spam.json")
         self.config = config
 

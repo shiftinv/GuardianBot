@@ -1,6 +1,6 @@
 import os
-from dataclasses import MISSING, dataclass
-from typing import List, Optional, Union, get_args, get_origin
+from dataclasses import MISSING, Field, dataclass
+from typing import Any, Optional, Union, get_args, get_origin
 
 
 @dataclass(frozen=True)
@@ -11,12 +11,11 @@ class __Config:
     guild_id: int
     data_dir: str
     muted_role_id: Optional[int]
-    mod_role_ids: List[int]
     git_commit: Optional[str]
     enable_owner_eval: bool = False
 
 
-def __get_value(field):
+def __get_value(field: Field[Any]) -> Any:
     if get_origin(field.type) is Union:  # Optional[X] is actually Union[X, None]
         args = get_args(field.type)
         assert len(args) == 2 and args[-1] is type(None)  # noqa: E721
@@ -63,5 +62,5 @@ def __get_value(field):
         raise ValueError(f"{e} (environment variable: '{env_name}')") from e
 
 
-kv = {field.name: __get_value(field) for field in __Config.__dataclass_fields__.values()}  # type: ignore
+kv = {field.name: __get_value(field) for field in __Config.__dataclass_fields__.values()}
 Config = __Config(**kv)

@@ -5,7 +5,7 @@ import sys
 import disnake
 from disnake.ext import commands
 
-from . import checks, error_handler, interactions, types, utils
+from . import error_handler, types, utils
 from .config import Config
 
 assert sys.version_info[:2] >= (3, 9)
@@ -24,14 +24,14 @@ logger.setLevel(logging.DEBUG if Config.debug else logging.INFO)
 
 intents = disnake.Intents.default()
 intents.members = True
+intents.message_content = True
 
-bot = interactions.CustomSyncBot(
+bot = commands.Bot(
     command_prefix=commands.when_mentioned_or(Config.prefix),
     activity=disnake.Activity(type=disnake.ActivityType.watching, name="Link(s)"),
     intents=intents,
     test_guilds=[Config.guild_id],
     sync_commands_debug=Config.debug,
-    sync_permissions=True,
     reload=utils.debugger_active(),
     allowed_mentions=disnake.AllowedMentions.none(),
 )
@@ -89,11 +89,18 @@ async def on_message_command(ctx: types.AppCI) -> None:
 
 
 # add global command checks
-cmd_filter = checks.command_filter()
-bot.check(cmd_filter)
-bot.application_command_check(slash_commands=True, user_commands=True, message_commands=True)(
-    cmd_filter
-)
+async def no_dm_filter(ctx: types.AnyContext) -> bool:
+    if await bot.is_owner(ctx.author):
+        return True
+    return ctx.guild is not None
+
+
+bot.check(no_dm_filter)
+bot.application_command_check(
+    slash_commands=True,
+    user_commands=True,
+    message_commands=True,
+)(no_dm_filter)
 
 # initialize global error handler
 error_handler.init(bot)

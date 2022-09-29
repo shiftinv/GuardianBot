@@ -27,7 +27,7 @@ class _SupportsID(Protocol):
 
 
 def to_snowflake(val: _SupportsID) -> disnake.abc.Snowflake:
-    return val  # type: ignore
+    return val
 
 
 def unwrap_opt(val: Optional[_T]) -> _T:

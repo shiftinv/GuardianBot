@@ -7,6 +7,8 @@ import disnake
 from .. import utils
 from ._base import CheckResult, ExternalBaseChecker
 
+__all__ = ["DiscordBadDomainsChecker"]
+
 
 class DiscordBadDomainsChecker(ExternalBaseChecker):
     def __init__(self):

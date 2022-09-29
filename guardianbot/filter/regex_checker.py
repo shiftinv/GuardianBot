@@ -5,6 +5,8 @@ import disnake
 
 from ._base import CheckResult, ManualBaseChecker
 
+__all__ = ["RegexChecker"]
+
 
 class RegexChecker(ManualBaseChecker):
     def __init__(self):
