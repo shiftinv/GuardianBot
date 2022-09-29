@@ -38,7 +38,7 @@ async def _handle_error(bot: types.Bot, exc: Optional[Exception]) -> bool:
             msg = "something is definitely broken"
 
         user = await bot.fetch_user(await utils.owner_id(bot))
-        await user.send(msg, file=types.unwrap_opt(file))
+        await user.send(msg, files=[file] if file else [])
     except Exception:
         print("failed sending exception:", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)

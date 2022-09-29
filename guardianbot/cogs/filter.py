@@ -231,7 +231,7 @@ class FilterCog(
         if duration is None:
             role = self._get_muted_role()
             assert role, "can't mute permanently without a mute role set"
-            await user.add_roles(types.to_snowflake(role), reason=reason)
+            await user.add_roles(role, reason=reason)
         else:
             await user.timeout(duration=duration, reason=reason)
 
@@ -257,7 +257,7 @@ class FilterCog(
     @multicmd.command(description="Unmutes a user")
     async def unmute(self, ctx: types.AnyContext, user: disnake.Member) -> None:
         if role := self._get_muted_role():
-            await user.remove_roles(types.to_snowflake(role))
+            await user.remove_roles(role)
         await user.timeout(duration=None)
 
         await ctx.send(f"Unmuted {str(user)}/{user.id}")
