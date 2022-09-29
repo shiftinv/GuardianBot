@@ -14,7 +14,7 @@ class DiscordBadDomainsChecker(ExternalBaseChecker):
     def __init__(self):
         super().__init__(
             "discord_bad_domains.cache",
-            "https://cdn.discordapp.com/bad-domains/hashes.json",
+            "https://cdn.discordapp.com/bad-domains/updated_hashes.json",
         )
 
     async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
