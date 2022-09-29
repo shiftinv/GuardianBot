@@ -5,7 +5,7 @@ import sys
 import disnake
 from disnake.ext import commands
 
-from . import error_handler, types, utils
+from . import checks, error_handler, types, utils
 from .config import Config
 
 assert sys.version_info[:2] >= (3, 9)
@@ -89,18 +89,11 @@ async def on_message_command(ctx: types.AppCI) -> None:
 
 
 # add global command checks
-async def no_dm_filter(ctx: types.AnyContext) -> bool:
-    if await bot.is_owner(ctx.author):
-        return True
-    return ctx.guild is not None
-
-
-bot.check(no_dm_filter)
-bot.application_command_check(
-    slash_commands=True,
-    user_commands=True,
-    message_commands=True,
-)(no_dm_filter)
+cmd_filter = checks.command_filter()
+bot.check(cmd_filter)
+bot.application_command_check(slash_commands=True, user_commands=True, message_commands=True)(
+    cmd_filter
+)
 
 # initialize global error handler
 error_handler.init(bot)

@@ -10,7 +10,7 @@ import disnake
 import humanize
 from disnake.ext import commands
 
-from .. import multicmd, types, utils
+from .. import checks, multicmd, types, utils
 from ..config import Config
 from ._base import BaseCog
 
@@ -61,7 +61,7 @@ class CoreCog(BaseCog[None]):
         description="Sends a message in another channel using the bot",
         slash_kwargs={"default_member_permissions": disnake.Permissions(manage_messages=True)},
     )
-    @commands.has_permissions(manage_messages=True)
+    @commands.check(checks.manage_messages)
     async def say(
         self,
         ctx: types.AnyContext,

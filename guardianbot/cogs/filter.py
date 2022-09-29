@@ -21,7 +21,7 @@ from typing import (
 import disnake
 from disnake.ext import commands
 
-from .. import error_handler, multicmd, types, utils
+from .. import checks, error_handler, multicmd, types, utils
 from ..config import Config
 from ..filter import (
     AllowList,
@@ -113,8 +113,7 @@ class FilterCog(
         self._update_checkers.stop()
 
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:
-        assert isinstance(ctx.author, disnake.Member)
-        return ctx.author.guild_permissions.manage_messages
+        return await checks.manage_messages(ctx)
 
     @loop_error_handled(hours=2)
     async def _update_checkers(self) -> None:
