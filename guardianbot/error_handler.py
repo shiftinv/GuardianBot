@@ -58,6 +58,13 @@ def init(bot: types.Bot) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_error(event, *args, **kwargs)
 
+    async def on_gateway_error(
+        event: str, data: Any, shard_id: Optional[int], exc: Exception
+    ) -> None:
+        if not await _handle_error(bot, exc):
+            print(f"error payload: {data!r}")
+            await super(types.Bot, bot).on_gateway_error(event, data, shard_id, exc)
+
     async def on_command_error(ctx: types.Context, exc: commands.errors.CommandError) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_command_error(ctx, exc)
@@ -89,6 +96,7 @@ def init(bot: types.Bot) -> None:
             await super(types.Bot, bot).on_message_command_error(inter, exc)
 
     bot.event(on_error)
+    bot.event(on_gateway_error)
     bot.event(on_command_error)
     bot.event(on_slash_command_error)
     bot.event(on_user_command_error)
