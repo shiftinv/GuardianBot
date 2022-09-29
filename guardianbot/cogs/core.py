@@ -1,10 +1,10 @@
+import ast
+import inspect
 import logging
-import pprint
 import sys
-import textwrap
 import traceback
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, List, Optional, Union
 
 import disnake
 import humanize
@@ -108,35 +108,27 @@ class CoreCog(BaseCog[None]):
         if not await self._bot.is_owner(ctx.author):  # *just to be sure*
             raise RuntimeError
 
+        output: List[str] = []
+
+        def _print(*s: Any):
+            output.append(" ".join(map(str, s)))
+
         # require string/codeblock
-        code = code.strip()
-        if not code.startswith("`"):
-            await ctx.send("code must be a \\`string\\` or \\`\\`\\`code block\\`\\`\\`")
-            return
+        code = code.strip(" `").removeprefix("python\n").removeprefix("py\n")
 
-        # add `return` to single-line args
-        code = code.strip("`").strip()
-        if len(code.splitlines()) == 1 and not code.startswith("return "):
-            code = f"return {code}"
-
-        # set global context
-        eval_globals = {
-            "discord": disnake,
-            "disnake": disnake,
-            "ctx": ctx,
-            "bot": self._bot,
-            "Config": Config,
-        }
-
-        code = f'async def _func():\n{textwrap.indent(code, "    ")}'
         logger.info(f"evaluating:\n{code}")
         try:
-            loc: Dict[str, Any] = {}
-            exec(code, eval_globals, loc)
-            result = await loc["_func"]()
-            await ctx.send(
-                f"```\n{disnake.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```"
+            compiled = compile(code, "<eval>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
+            result = eval(
+                compiled,
+                {"ctx": ctx, "bot": ctx.bot, "disnake": disnake, "print": _print, "Config": Config},
             )
+            if inspect.isawaitable(result):
+                await result
+
+            if output:
+                x = "\n".join(output)
+                await ctx.send(f"```\n{x}\n```")
         except Exception as e:
             logger.exception("failed evaluating code")
 
@@ -145,8 +137,8 @@ class CoreCog(BaseCog[None]):
                 # find line number in input code
                 try:
                     for frame, lineno in traceback.walk_tb(e.__traceback__):
-                        if frame.f_code.co_filename == "<string>":
-                            line = f" (line {lineno - 1})"  # -1 because of header
+                        if frame.f_code.co_filename == "<eval>":
+                            line = f" (line {lineno})"
                 except Exception:
                     pass
 
