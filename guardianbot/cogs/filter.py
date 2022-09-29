@@ -147,7 +147,9 @@ class FilterCog(
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
         if not message.guild:
             return False, "DM"
-        assert message.guild.id == Config.guild_id
+        if message.guild.id != Config.guild_id:
+            return False, f"Unknown guild ({message.guild.id})"
+
         if message.author.bot:
             return False, "bot"
         if message.webhook_id:
