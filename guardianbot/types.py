@@ -14,12 +14,12 @@ AnyContext = Union[Context, AppCI]
 
 NoneCoro = Coroutine[Any, Any, None]
 HandlerType = Callable[..., NoneCoro]
-THandlerType = TypeVar('THandlerType', bound=HandlerType)
+THandlerType = TypeVar("THandlerType", bound=HandlerType)
 
 
 # some typing utils (mostly to work around incorrect interface specs in discord.py):
 
-_T = TypeVar('_T')
+_T = TypeVar("_T")
 
 
 class _SupportsID(Protocol):

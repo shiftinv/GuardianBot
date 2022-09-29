@@ -12,13 +12,19 @@ class CustomSyncBot(commands.Bot):
             # make sure `default_permission` is `False` if custom permissions are set
             all_perms: List[bool] = []
             for u in command.permissions.values():
-                for p in (u.permissions, u.role_ids, u.user_ids, {None: u.owner} if u.owner is not None else None):
+                for p in (
+                    u.permissions,
+                    u.role_ids,
+                    u.user_ids,
+                    {None: u.owner} if u.owner is not None else None,
+                ):
                     if not p:
                         continue
                     all_perms.extend(p.values())
             if all_perms and all(p is True for p in all_perms):
-                assert command.body.default_permission is False, \
-                    f'custom command permissions require `default_permission = False` (command: \'{command.qualified_name}\')'
+                assert (
+                    command.body.default_permission is False
+                ), f"custom command permissions require `default_permission = False` (command: '{command.qualified_name}')"
 
         # call original func
         return await super()._sync_application_command_permissions()
@@ -33,12 +39,12 @@ class CustomSyncBot(commands.Bot):
 
 
 _TCmd = TypeVar(
-    '_TCmd',
+    "_TCmd",
     commands.InvokableApplicationCommand,
     types.HandlerType,
     # permissions can only be set on top level, not per subcommand/subgroup
     multicmd._MultiCommand,
-    multicmd._MultiGroup
+    multicmd._MultiGroup,
 )
 
 
@@ -46,7 +52,7 @@ def allow(
     *,
     roles: Optional[Dict[int, bool]] = None,
     users: Optional[Dict[int, bool]] = None,
-    owner: Optional[bool] = None
+    owner: Optional[bool] = None,
 ) -> Callable[[_TCmd], _TCmd]:
     def wrap(cmd: _TCmd) -> _TCmd:
         dec = commands.guild_permissions(
@@ -60,7 +66,7 @@ def allow(
         if isinstance(cmd, (multicmd._MultiCommand, multicmd._MultiGroup)):
             dec_input = cmd._slash_command
         elif isinstance(cmd, multicmd._MultiBase) or not callable(cmd):
-            raise TypeError(f'permissions cannot be set on `{type(cmd).__name__}` objects')
+            raise TypeError(f"permissions cannot be set on `{type(cmd).__name__}` objects")
         else:
             dec_input = cmd
 
@@ -70,6 +76,7 @@ def allow(
         assert r is dec_input
 
         return cmd
+
     return wrap
 
 

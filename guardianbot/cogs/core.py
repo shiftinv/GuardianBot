@@ -24,45 +24,36 @@ class CoreCog(BaseCog[None]):
     async def on_ready(self) -> None:
         self._start_time = utils.utcnow()
 
-    @multicmd.command(
-        description='Shows information about the bot'
-    )
+    @multicmd.command(description="Shows information about the bot")
     async def info(self, ctx: types.AnyContext) -> None:
         embed = disnake.Embed()
 
         if Config.git_commit:
             embed.add_field(
-                name='Commit',
+                name="Commit",
                 value=Config.git_commit,
             )
+        embed.add_field(name="discord.py", value=disnake.__version__)
         embed.add_field(
-            name='discord.py',
-            value=disnake.__version__
-        )
-        embed.add_field(
-            name='Python',
-            value='.'.join(map(str, sys.version_info[:3])),
+            name="Python",
+            value=".".join(map(str, sys.version_info[:3])),
         )
 
         assert self._start_time
         embed.add_field(
-            name='Uptime',
+            name="Uptime",
             value=humanize.naturaldelta(utils.utcnow() - self._start_time),
-            inline=False
+            inline=False,
         )
-        embed.add_field(
-            name='Ping',
-            value=f'{int(self._bot.latency * 1000)}ms',
-            inline=False
-        )
+        embed.add_field(name="Ping", value=f"{int(self._bot.latency * 1000)}ms", inline=False)
 
         await ctx.send(embed=embed)
 
     @interactions.allow(owner=True)
     @multicmd.command(
-        name='restart' if utils.is_docker() else 'shutdown',
+        name="restart" if utils.is_docker() else "shutdown",
         description=f'{"Restarts" if utils.is_docker() else "Shuts down"} the bot',
-        slash_kwargs=dict(default_permission=False)
+        slash_kwargs=dict(default_permission=False),
     )
     @commands.is_owner()
     async def shutdown(self, ctx: types.AnyContext) -> None:
@@ -70,23 +61,25 @@ class CoreCog(BaseCog[None]):
 
     @interactions.allow_mod
     @multicmd.command(
-        description='Sends a message in another channel using the bot',
-        slash_kwargs=dict(default_permission=False)
+        description="Sends a message in another channel using the bot",
+        slash_kwargs=dict(default_permission=False),
     )
     @commands.check(checks.manage_messages)
     async def say(self, ctx: types.AnyContext, channel: disnake.TextChannel, *, text: str) -> None:
         await channel.send(text)
 
         await ctx.send(
-            f'Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```',
-            allowed_mentions=disnake.AllowedMentions.all().merge(disnake.AllowedMentions(everyone=False)),
+            f"Sent the following message in {channel.mention}:\n```\n{disnake.utils.escape_mentions(text)}\n```",
+            allowed_mentions=disnake.AllowedMentions.all().merge(
+                disnake.AllowedMentions(everyone=False)
+            ),
         )
 
     @commands.command(hidden=True)
     @commands.is_owner()
     async def botinvite(self, ctx: types.Context, *scopes: str) -> None:
         if not scopes:
-            scopes = ('bot', 'applications.commands')
+            scopes = ("bot", "applications.commands")
         link = disnake.utils.oauth_url(
             self._bot.user.id,
             permissions=disnake.Permissions(
@@ -114,47 +107,49 @@ class CoreCog(BaseCog[None]):
 
         # require string/codeblock
         code = code.strip()
-        if not code.startswith('`'):
-            await ctx.send('code must be a \\`string\\` or \\`\\`\\`code block\\`\\`\\`')
+        if not code.startswith("`"):
+            await ctx.send("code must be a \\`string\\` or \\`\\`\\`code block\\`\\`\\`")
             return
 
         # add `return` to single-line args
-        code = code.strip('`').strip()
-        if len(code.splitlines()) == 1 and not code.startswith('return '):
-            code = f'return {code}'
+        code = code.strip("`").strip()
+        if len(code.splitlines()) == 1 and not code.startswith("return "):
+            code = f"return {code}"
 
         # set global context
         eval_globals = {
-            'discord': disnake,
-            'disnake': disnake,
-            'ctx': ctx,
-            'bot': self._bot,
-            'Config': Config,
+            "discord": disnake,
+            "disnake": disnake,
+            "ctx": ctx,
+            "bot": self._bot,
+            "Config": Config,
         }
 
         code = f'async def _func():\n{textwrap.indent(code, "    ")}'
-        logger.info(f'evaluating:\n{code}')
+        logger.info(f"evaluating:\n{code}")
         try:
             loc: Dict[str, Any] = {}
             exec(code, eval_globals, loc)
-            result = await loc['_func']()
-            await ctx.send(f'```\n{disnake.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```')
+            result = await loc["_func"]()
+            await ctx.send(
+                f"```\n{disnake.utils.escape_mentions(pprint.pformat(result, depth=3, sort_dicts=False))}\n```"
+            )
         except Exception as e:
-            logger.exception('failed evaluating code')
+            logger.exception("failed evaluating code")
 
-            line = ''
+            line = ""
             if e.__traceback__ is not None:
                 # find line number in input code
                 try:
                     for frame, lineno in traceback.walk_tb(e.__traceback__):
-                        if frame.f_code.co_filename == '<string>':
-                            line = f' (line {lineno - 1})'  # -1 because of header
+                        if frame.f_code.co_filename == "<string>":
+                            line = f" (line {lineno - 1})"  # -1 because of header
                 except Exception:
                     pass
 
             await ctx.send(
-                f'Something went wrong{line}:\n'
-                f'```\n{type(e).__name__}: {disnake.utils.escape_mentions(str(e))}\n```'
+                f"Something went wrong{line}:\n"
+                f"```\n{type(e).__name__}: {disnake.utils.escape_mentions(str(e))}\n```"
             )
 
 

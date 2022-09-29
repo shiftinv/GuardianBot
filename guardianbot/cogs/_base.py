@@ -26,17 +26,16 @@ logger = logging.getLogger(__name__)
 
 
 # no `Optional[StrictModel]` bound since narrowing optional typevar bounds is close to impossible
-_TState = TypeVar('_TState')
+_TState = TypeVar("_TState")
 PermissionDecorator = Callable[[Any], Any]
 
 
 class _BaseMeta(multicmd._MultiCmdMeta):
-    def __init__(cls: Type['BaseCog'], *args: Any, **kwargs: Any):  # type: ignore
+    def __init__(cls: Type["BaseCog"], *args: Any, **kwargs: Any):  # type: ignore
         super().__init__(*args, **kwargs)  # type: ignore
         for cmd in cls.__cog_app_commands__:
-            if (
-                isinstance(cmd, commands.InvokableApplicationCommand)
-                and not isinstance(cmd, (commands.SubCommand, commands.SubCommandGroup))
+            if isinstance(cmd, commands.InvokableApplicationCommand) and not isinstance(
+                cmd, (commands.SubCommand, commands.SubCommandGroup)
             ):
                 decorators, default = cls.cog_guild_permissions()
                 if default is not None:
@@ -52,16 +51,18 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
 
     def __init__(self, bot: types.Bot):
         if not isinstance(bot, interactions.CustomSyncBot):
-            raise TypeError('expected bot to be (a subclass of) `interactions.CustomSyncBot`')
+            raise TypeError("expected bot to be (a subclass of) `interactions.CustomSyncBot`")
         self._bot = bot
 
-        self._state_path = Path(Config.data_dir) / 'state' / f'{type(self).__name__.lower()}.json'
+        self._state_path = Path(Config.data_dir) / "state" / f"{type(self).__name__.lower()}.json"
         # get `_TState` at runtime
         state_type = get_args(type(self).__orig_bases__[0])[0]  # type: ignore
         if state_type is type(None):  # noqa: E721
             state_type = None
         else:
-            assert issubclass(state_type, utils.StrictModel), f'state type must inherit from `StrictModel` (got \'{state_type}\')'
+            assert issubclass(
+                state_type, utils.StrictModel
+            ), f"state type must inherit from `StrictModel` (got '{state_type}')"
         self.__state_type: Optional[Type[utils.StrictModel]] = state_type
 
         self._read_state()
@@ -125,7 +126,7 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=_BaseMeta):
         return session
 
 
-_CogT = TypeVar('_CogT', bound=BaseCog[Any])
+_CogT = TypeVar("_CogT", bound=BaseCog[Any])
 _LoopFunc = Callable[[_CogT], Awaitable[None]]
 
 
@@ -139,4 +140,5 @@ def loop_error_handled(**kwargs: Any) -> Callable[[_LoopFunc[_CogT]], tasks.Loop
                 await error_handler.handle_task_error(self._bot, e)
 
         return tasks.loop(**kwargs)(wrap)
+
     return decorator

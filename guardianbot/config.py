@@ -33,22 +33,24 @@ def __get_value(field):
         is_list = False
 
     if field_type is bool:
+
         def to_bool(val: str) -> bool:
             val = val.lower()
-            if val in ('1', 'true', 'yes'):
+            if val in ("1", "true", "yes"):
                 return True
-            elif val in ('0', 'false', 'no'):
+            elif val in ("0", "false", "no"):
                 return False
-            raise ValueError(f'Invalid bool value: \'{val}\'')
+            raise ValueError(f"Invalid bool value: '{val}'")
+
         field_type = to_bool
 
-    env_name = f'DISCORD_{field.name.upper()}'
+    env_name = f"DISCORD_{field.name.upper()}"
     try:
         val_str = os.environ[env_name]
         if is_list:
             if not val_str:
                 return []
-            return list(map(field_type, val_str.split(',')))
+            return list(map(field_type, val_str.split(",")))
         else:
             return field_type(val_str)
     except KeyError:
@@ -56,9 +58,9 @@ def __get_value(field):
             return None
         if field.default is not MISSING:
             return field.default
-        raise RuntimeError(f'Environment variable \'{env_name}\' not set')
+        raise RuntimeError(f"Environment variable '{env_name}' not set")
     except ValueError as e:
-        raise ValueError(f'{e} (environment variable: \'{env_name}\')') from e
+        raise ValueError(f"{e} (environment variable: '{env_name}')") from e
 
 
 kv = {field.name: __get_value(field) for field in __Config.__dataclass_fields__.values()}  # type: ignore

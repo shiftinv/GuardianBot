@@ -33,7 +33,7 @@ class BaseChecker(Collection[str]):
         self._load_list()
 
     async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
-        ''' Returns a reason string if the input matched and should be blocked, returns None otherwise '''
+        """Returns a reason string if the input matched and should be blocked, returns None otherwise"""
         raise NotImplementedError
 
     @property
@@ -43,16 +43,16 @@ class BaseChecker(Collection[str]):
     def _load_list(self) -> None:
         if not os.path.isfile(self.cache_path):
             return
-        with open(self.cache_path, 'r') as f:
+        with open(self.cache_path, "r") as f:
             self._strings.clear()
             self._strings.extend(json.load(f))
-        logger.debug(f'loaded {len(self)} entries for {self}')
+        logger.debug(f"loaded {len(self)} entries for {self}")
 
     def _write_list(self) -> None:
         os.makedirs(os.path.dirname(self.cache_path), exist_ok=True)
-        with open(self.cache_path, 'w') as f:
+        with open(self.cache_path, "w") as f:
             json.dump(list(self._strings), f, indent=4)
-        logger.debug(f'wrote {len(self)} entries for {self}')
+        logger.debug(f"wrote {len(self)} entries for {self}")
 
     def __len__(self) -> int:
         return len(self._strings)
@@ -66,10 +66,10 @@ class BaseChecker(Collection[str]):
 
 class ManualBaseChecker(BaseChecker):
     def entry_add(self, input: str) -> Union[bool, str]:
-        '''
+        """
         Adds given input to list, returning True if successful, False if value already exists,
         or a string response if other validation checks failed
-        '''
+        """
         if input in self._strings:
             return False
         self._strings.append(input)
@@ -77,9 +77,9 @@ class ManualBaseChecker(BaseChecker):
         return True
 
     def entry_remove(self, input: str) -> bool:
-        '''
+        """
         Removes given input from list, returning True if successful, or False if value doesn't exist
-        '''
+        """
         if input not in self._strings:
             return False
         self._strings.remove(input)
