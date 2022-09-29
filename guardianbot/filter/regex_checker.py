@@ -1,8 +1,9 @@
 import re
-import disnake
 from typing import Optional, Union
 
-from ._base import ManualBaseChecker, CheckResult
+import disnake
+
+from ._base import CheckResult, ManualBaseChecker
 
 
 class RegexChecker(ManualBaseChecker):

@@ -1,13 +1,13 @@
 import io
 import sys
-import disnake
-import warnings
 import traceback
-from disnake.ext import commands
+import warnings
 from typing import Any, Optional
 
-from . import types, utils
+import disnake
+from disnake.ext import commands
 
+from . import types, utils
 
 _attr_suppress_help = '_suppress_help'
 

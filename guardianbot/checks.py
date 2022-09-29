@@ -1,5 +1,6 @@
-import disnake
 from typing import Any, Callable, Coroutine, cast
+
+import disnake
 
 from . import types
 from .config import Config

@@ -1,7 +1,8 @@
-import disnake
 from typing import Optional
 
-from ._base import ManualBaseChecker, CheckResult
+import disnake
+
+from ._base import CheckResult, ManualBaseChecker
 
 
 class ListChecker(ManualBaseChecker):

@@ -1,14 +1,14 @@
-import socket
-import aiodns
 import asyncio
 import logging
-import disnake
+import socket
 from ipaddress import IPv4Address, IPv4Network
 from typing import Dict, List, Optional, Set, Union, cast
 
-from ._base import ManualBaseChecker, CheckResult
-from .. import utils
+import aiodns
+import disnake
 
+from .. import utils
+from ._base import CheckResult, ManualBaseChecker
 
 logger = logging.getLogger(__name__)
 

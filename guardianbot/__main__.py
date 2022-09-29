@@ -1,12 +1,12 @@
-import sys
 import asyncio
 import logging
+import sys
+
 import disnake
 from disnake.ext import commands
 
-from . import checks, interactions, error_handler, types, utils
+from . import checks, error_handler, interactions, types, utils
 from .config import Config
-
 
 assert sys.version_info[:2] >= (3, 9)
 

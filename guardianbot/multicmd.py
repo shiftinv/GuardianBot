@@ -1,7 +1,8 @@
 import inspect
 from dataclasses import dataclass, fields
-from disnake.ext import commands
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, cast
+
+from disnake.ext import commands
 
 from . import types, utils
 from .config import Config

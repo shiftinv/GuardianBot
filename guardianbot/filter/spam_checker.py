@@ -1,15 +1,15 @@
 import itertools
-import re
-import disnake
 import logging
-from pydantic import Field
-from datetime import datetime, timedelta
+import re
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from .. import utils
-from ._base import ManualBaseChecker, CheckResult
+import disnake
+from pydantic import Field
 
+from .. import utils
+from ._base import CheckResult, ManualBaseChecker
 
 logger = logging.getLogger(__name__)
 

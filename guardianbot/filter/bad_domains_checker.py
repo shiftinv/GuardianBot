@@ -1,10 +1,11 @@
 import hashlib
-import aiohttp
-import disnake
 from typing import List, Optional
 
-from ._base import ExternalBaseChecker, CheckResult
+import aiohttp
+import disnake
+
 from .. import utils
+from ._base import CheckResult, ExternalBaseChecker
 
 
 class DiscordBadDomainsChecker(ExternalBaseChecker):

@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass, MISSING
+from dataclasses import MISSING, dataclass
 from typing import List, Optional, Union, get_args, get_origin
 
 

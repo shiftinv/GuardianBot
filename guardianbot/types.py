@@ -1,7 +1,7 @@
-import disnake
-from disnake.ext import commands
 from typing import Any, Callable, Coroutine, Optional, Protocol, TypeVar, Union
 
+import disnake
+from disnake.ext import commands
 
 # general definitions
 Bot = commands.Bot

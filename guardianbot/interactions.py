@@ -1,5 +1,6 @@
-from disnake.ext import commands
 from typing import Callable, Dict, List, Optional, TypeVar, Union
+
+from disnake.ext import commands
 
 from . import multicmd, types, utils
 from .config import Config
