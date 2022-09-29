@@ -69,10 +69,7 @@ def init(bot: types.Bot) -> None:
         if not await _handle_error(bot, exc):
             await super(types.Bot, bot).on_command_error(ctx, exc)
 
-        if isinstance(exc, commands.errors.CommandNotFound):
-            # react to unknown commands
-            await ctx.message.add_reaction("❓")
-        elif isinstance(exc, commands.errors.UserInputError) and not getattr(
+        if isinstance(exc, commands.errors.UserInputError) and not getattr(
             exc, _attr_suppress_help, None
         ):
             # send help for specific command if the parameters are incorrect
