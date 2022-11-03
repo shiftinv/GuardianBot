@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import textwrap
 from datetime import datetime, timedelta
 from typing import (
     Any,
@@ -207,7 +208,15 @@ class FilterCog(
             )
 
             embed.add_field(
-                name="Text", value=f"```\n{message.clean_content}\n``` ({message.id})", inline=False
+                name="Text",
+                value=textwrap.dedent(
+                    f"""\
+                        ```
+                        {message.clean_content}
+                        ``` ([{message.id}]({message.jump_url}))
+                    """
+                ),
+                inline=False,
             )
             embed.add_field(
                 name="Channel",
