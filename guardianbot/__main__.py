@@ -31,7 +31,7 @@ bot = commands.Bot(
     activity=disnake.Activity(type=disnake.ActivityType.watching, name="Link(s)"),
     intents=intents,
     test_guilds=[Config.guild_id],
-    sync_commands_debug=Config.debug,
+    command_sync_flags=commands.CommandSyncFlags.all(),
     reload=utils.debugger_active(),
     allowed_mentions=disnake.AllowedMentions.none(),
 )
