@@ -9,7 +9,7 @@ Context = commands.Context[Bot]
 
 
 # useful typing shortcuts
-AppCI = disnake.ApplicationCommandInteraction
+AppCI = disnake.ApplicationCommandInteraction[Bot]
 AnyContext = Union[Context, AppCI]
 
 NoneCoro = Coroutine[Any, Any, None]

@@ -2,6 +2,7 @@ import inspect
 from dataclasses import dataclass, fields
 from typing import Any, Callable, Dict, Generic, Optional, Type, TypeVar, cast
 
+import disnake
 from disnake.ext import commands
 
 from . import types, utils
@@ -58,7 +59,7 @@ def group(
 
 
 async def defer(ctx: types.AnyContext) -> None:
-    if isinstance(ctx, types.AppCI):
+    if isinstance(ctx, disnake.AppCommandInter):
         await ctx.response.defer()
     else:
         msg = await ctx.send(f"**•••** {ctx.me.name} is thinking...")
@@ -66,7 +67,7 @@ async def defer(ctx: types.AnyContext) -> None:
 
 
 async def edit_response(ctx: types.AnyContext, **kwargs: Any) -> None:
-    if isinstance(ctx, types.AppCI):
+    if isinstance(ctx, disnake.AppCommandInter):
         await ctx.edit_original_message(**kwargs)
     else:
         msg = ctx.channel.get_partial_message(getattr(ctx, "__response_message__"))

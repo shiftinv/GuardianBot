@@ -49,7 +49,7 @@ def convert_checker(
     type: Type[_TChecker] = BaseChecker,
 ) -> Callable[[types.AnyContext, str], Coroutine[Any, Any, _TChecker]]:
     async def convert(ctx: types.AnyContext, arg: str) -> _TChecker:
-        cog = ctx.application_command.cog if isinstance(ctx, types.AppCI) else ctx.cog
+        cog = ctx.application_command.cog if isinstance(ctx, disnake.AppCommandInter) else ctx.cog
         assert isinstance(cog, FilterCog)
         checkers = cog.get_checkers(type)
         if arg not in checkers:
