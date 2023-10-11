@@ -56,7 +56,7 @@ def convert_checker(
             err = f"Invalid argument. Valid choices: {list(checkers.keys())}"
             await ctx.send(err)
             raise utils.suppress_help(commands.BadArgument(err))
-        return checkers[arg]  # type: ignore
+        return checkers[arg]
 
     return convert
 

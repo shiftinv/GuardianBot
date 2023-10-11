@@ -130,8 +130,8 @@ def copy_patch_signature(func: TCallable, sig: inspect.Signature) -> TCallable:
         func.__code__, func.__globals__, func.__name__, func.__defaults__, func.__closure__
     )
     new_func = functools.update_wrapper(new_func, func)
-    new_func.__kwdefaults__ = func.__kwdefaults__
-    del new_func.__wrapped__  # type: ignore
+    new_func.__kwdefaults__ = func.__kwdefaults__  # type: ignore
+    del new_func.__wrapped__
 
     # set signature
     new_func.__signature__ = sig  # type: ignore

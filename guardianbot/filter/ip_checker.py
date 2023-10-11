@@ -2,7 +2,7 @@ import asyncio
 import logging
 import socket
 from ipaddress import IPv4Address, IPv4Network
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union, cast
 
 import aiodns
 import disnake
@@ -30,7 +30,9 @@ class IPChecker(ManualBaseChecker):
 
         addrs: List[str] = []
         try:
-            addrs = (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
+            addrs = cast(
+                "List[str]", (await self._resolver.gethostbyname(host, socket.AF_INET)).addresses
+            )
         except Exception:
             pass
 
