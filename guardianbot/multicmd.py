@@ -133,23 +133,10 @@ class _MultiBase(Generic[_TCmd, _TSlashCmd]):
 
         cmd_func = utils.patch_parameters(func, replace_defaults)
 
-        # fix annotation for interaction parameter
-        def replace_inter_annotation(p: inspect.Parameter) -> Dict[str, Any]:
-            if p.annotation is types.AnyContext:
-                return {"annotation": types.AppCI}
-            return {}
-
-        slash_func = utils.patch_parameters(func, replace_inter_annotation)
-        # fix converter signatures
-        for p in inspect.signature(slash_func).parameters.values():
-            d = p.default
-            if isinstance(d, commands.ParamInfo) and d.converter:
-                d.converter = utils.patch_parameters(d.converter, replace_inter_annotation)
-
         # create new instance with classic command and slash command
         inst = _cls(
             cmd_decorator(name=name, help=description, **(cmd_kwargs or {}))(cmd_func),
-            slash_decorator(name=name, description=description, **(slash_kwargs or {}))(slash_func),
+            slash_decorator(name=name, description=description, **(slash_kwargs or {}))(func),
         )
         return cast(_T, inst)
 
