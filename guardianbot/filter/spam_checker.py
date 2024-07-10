@@ -9,7 +9,7 @@ import disnake
 import pydantic
 
 from .. import utils
-from ._base import CheckResult, ManualBaseChecker
+from ._base import CheckContext, CheckResult, ManualBaseChecker
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +30,11 @@ class SpamChecker(ManualBaseChecker):
         self.history: Dict[Tuple[int, str], List[disnake.PartialMessage]] = defaultdict(list)
         self.__last_clear = utils.utcnow()
 
-    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
-        now = msg.created_at
-        min_spam_time = now - timedelta(seconds=self.config.interval_sec)
+    async def check_match(self, context: CheckContext) -> Optional[CheckResult]:
+        created = context.message.created_at
+        min_spam_time = created - timedelta(seconds=self.config.interval_sec)
 
-        if self.__last_clear < now - timedelta(seconds=5):
+        if self.__last_clear < created - timedelta(seconds=5):
             dropped = 0
 
             for k, hist in list(self.history.items()):
@@ -51,20 +51,20 @@ class SpamChecker(ManualBaseChecker):
 
             if dropped:
                 logger.debug(f"cleaned {dropped} history entries")
-            self.__last_clear = now
+            self.__last_clear = created
 
         for r in self:
-            if match := re.search(r, msg.content, re.MULTILINE):
-                created = msg.created_at
+            if match := re.search(r, context.string, re.MULTILINE):
+                author = context.message.author
 
-                hist = self.history[(msg.author.id, msg.content)]
+                hist = self.history[(author.id, context.string)]
                 logger.debug(
-                    f"detected potential spam by {str(msg.author)}/{msg.author.id}: '{msg.content}'"
+                    f"detected potential spam by {str(author)}/{author.id}: '{context.string}'"
                     f" (previous times: {[m.created_at.replace(microsecond=0).isoformat() for m in hist]})"
                 )
 
                 # store partial message for deletion later
-                hist.append(msg.channel.get_partial_message(msg.id))
+                hist.append(context.message.channel.get_partial_message(context.message.id))
 
                 # drop older history entries
                 before = len(hist)

@@ -11,12 +11,28 @@ from ..config import Config
 
 __all__ = [
     "AnyMessageList",
+    "CheckContext",
     "BaseChecker",
     "ExternalBaseChecker",
     "ManualBaseChecker",
 ]
 
 AnyMessageList = Sequence[Union[disnake.Message, disnake.PartialMessage]]
+
+
+@dataclass(frozen=True)
+class CheckContext:
+    message: disnake.Message
+    string: str
+
+    @classmethod
+    def from_message(cls, msg: disnake.Message):
+        strings: List[str] = [msg.content]
+        for embed in msg.embeds:
+            embed_contents = [embed.title or "", embed.description or ""]
+            embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
+            strings.append("\n".join(embed_contents))
+        return cls(msg, "\n".join(strings))
 
 
 @dataclass(frozen=True)
@@ -39,7 +55,7 @@ class BaseChecker(Collection[str]):
 
         self._load_list()
 
-    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
+    async def check_match(self, context: CheckContext) -> Optional[CheckResult]:
         """Returns a reason string if the input matched and should be blocked, returns None otherwise"""
         raise NotImplementedError
 

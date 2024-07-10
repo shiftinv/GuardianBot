@@ -2,7 +2,6 @@ import asyncio
 import io
 import json
 import logging
-import textwrap
 from datetime import datetime, timedelta
 from typing import (
     Any,
@@ -28,6 +27,7 @@ from ..filter import (
     AllowList,
     AnyMessageList,
     BaseChecker,
+    CheckContext,
     DiscordBadDomainsChecker,
     ExternalBaseChecker,
     IPChecker,
@@ -132,17 +132,18 @@ class FilterCog(
             logger.info(f"ignoring message {message.id} by {message.author} ({check_reason})")
             return
 
+        context = CheckContext.from_message(message)
         for checker in self.checkers.values():
             if checker is self.allowlist:
                 continue
 
             if result := await utils.wait_timeout(
-                checker.check_match(message), 5, None  # 5 second timeout
+                checker.check_match(context), 5, None  # 5 second timeout
             ):
                 if result.host and result.host in self.allowlist:
                     logger.info(f"preventing block, host '{result.host}' is allowed explicitly")
                     continue
-                await self._handle_blocked(message, result.reason, result.messages or [message])
+                await self._handle_blocked(context, result.reason, result.messages or [message])
                 break
 
         # recurse for message snapshots, which are implemented to be basically the same as
@@ -177,11 +178,11 @@ class FilterCog(
         return True, ""
 
     async def _handle_blocked(
-        self, message: disnake.Message, reason: str, to_delete: AnyMessageList
+        self, context: CheckContext, reason: str, to_delete: AnyMessageList
     ) -> None:
-        author = cast(disnake.Member, message.author)
+        author = cast(disnake.Member, context.message.author)
         logger.info(
-            f"blocking message(s) by {str(author)}/{author.id} ('{message.content}') - {reason}"
+            f"blocking message(s) by {str(author)}/{author.id} ('{context.string}') - {reason}"
         )
 
         tasks: List[Awaitable[Any]] = []
@@ -196,8 +197,8 @@ class FilterCog(
         )
 
         # delete messages
-        if message.id not in (m.id for m in to_delete):
-            to_delete = [*to_delete, message]
+        if context.message.id not in (m.id for m in to_delete):
+            to_delete = [*to_delete, context.message]
         logger.info(f"deleting {len(to_delete)} message(s): {[m.id for m in to_delete]}")
         tasks.extend(m.delete() for m in to_delete)
 
@@ -217,18 +218,18 @@ class FilterCog(
 
             embed.add_field(
                 name="Text",
-                value=textwrap.dedent(
-                    f"""\
-                        ```
-                        {message.clean_content}
-                        ``` ([{message.id}]({message.jump_url}))
-                    """
+                value="\n".join(
+                    [
+                        "```",
+                        f"{disnake.utils.escape_markdown(context.string)}",
+                        f"``` ([{context.message.id}]({context.message.jump_url}))",
+                    ]
                 ),
                 inline=False,
             )
             embed.add_field(
                 name="Channel",
-                value=cast(disnake.TextChannel, message.channel).mention,
+                value=cast(disnake.TextChannel, context.message.channel).mention,
                 inline=False,
             )
 
@@ -241,7 +242,7 @@ class FilterCog(
             )
             await report_channel.send(embed=embed)
 
-        logger.info(f"successfully blocked message {message.id}")
+        logger.info(f"successfully blocked message {context.message.id}")
 
     async def _mute_user(
         self, user: disnake.Member, duration: Optional[timedelta], reason: Optional[str]

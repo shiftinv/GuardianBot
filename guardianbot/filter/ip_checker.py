@@ -5,10 +5,9 @@ from ipaddress import IPv4Address, IPv4Network
 from typing import Dict, List, Optional, Set, Union, cast
 
 import aiodns
-import disnake
 
 from .. import utils
-from ._base import CheckResult, ManualBaseChecker
+from ._base import CheckContext, CheckResult, ManualBaseChecker
 
 __all__ = ["IPChecker"]
 
@@ -41,8 +40,8 @@ class IPChecker(ManualBaseChecker):
 
     # overridden methods
 
-    async def check_match(self, msg: disnake.Message) -> Optional[CheckResult]:
-        hosts = utils.extract_hosts(msg.content)
+    async def check_match(self, context: CheckContext) -> Optional[CheckResult]:
+        hosts = utils.extract_hosts(context.string)
         if not hosts:
             return None
         logger.debug(f"extracted hosts: {hosts}")
