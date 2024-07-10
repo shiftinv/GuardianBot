@@ -24,6 +24,7 @@ AnyMessageList = Sequence[Union[disnake.Message, disnake.PartialMessage]]
 class CheckContext:
     message: disnake.Message
     string: str
+    author: disnake.Member
 
     @classmethod
     def from_message(cls, msg: disnake.Message):
@@ -32,7 +33,17 @@ class CheckContext:
             embed_contents = [embed.title or "", embed.description or ""]
             embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
             strings.append("\n".join(embed_contents))
-        return cls(msg, "\n".join(strings))
+
+        return cls(msg, "\n".join(strings), cls.get_author(msg))
+
+    @staticmethod
+    def get_author(msg: disnake.Message) -> disnake.Member:
+        author = msg.author
+        if msg._interaction_user_id:
+            assert msg.guild  # this always exists here
+            author = msg.guild.get_member(msg._interaction_user_id)
+        assert isinstance(author, disnake.Member)
+        return author
 
 
 @dataclass(frozen=True)

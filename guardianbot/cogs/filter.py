@@ -129,7 +129,12 @@ class FilterCog(
     async def on_message(self, message: disnake.Message) -> None:
         check, check_reason = await self._should_check(message)
         if not check:
-            logger.info(f"ignoring message {message.id} by {message.author} ({check_reason})")
+            author = (
+                message._interaction_user_id
+                and self._bot.get_user(message._interaction_user_id)
+                or message.author
+            )
+            logger.info(f"ignoring message {message.id} by {author} ({check_reason})")
             return
 
         context = CheckContext.from_message(message)
@@ -160,9 +165,10 @@ class FilterCog(
         if message.guild.id != Config.guild_id:
             return False, f"Unknown guild ({message.guild.id})"
 
-        if message.author.bot:
+        author = CheckContext.get_author(message)
+        if author.bot:
             return False, "bot"
-        if message.webhook_id:
+        if not message._interaction_user_id and message.webhook_id:
             return False, "webhook"
 
         ctx: types.Context = await self._bot.get_context(message)
@@ -170,8 +176,7 @@ class FilterCog(
             return False, "command"
 
         if any(
-            disnake.utils.get(cast(disnake.Member, message.author).roles, id=role_id)
-            for role_id in self.state.unfiltered_roles
+            disnake.utils.get(author.roles, id=role_id) for role_id in self.state.unfiltered_roles
         ):
             return False, "user with unfiltered role"
 
@@ -180,9 +185,8 @@ class FilterCog(
     async def _handle_blocked(
         self, context: CheckContext, reason: str, to_delete: AnyMessageList
     ) -> None:
-        author = cast(disnake.Member, context.message.author)
         logger.info(
-            f"blocking message(s) by {str(author)}/{author.id} ('{context.string}') - {reason}"
+            f"blocking message(s) by {str(context.author)}/{context.author.id} ('{context.string}') - {reason}"
         )
 
         tasks: List[Awaitable[Any]] = []
@@ -190,7 +194,7 @@ class FilterCog(
         # mute user
         tasks.append(
             self._mute_user(
-                author,
+                context.author,
                 timedelta(minutes=self.state.mute_minutes) if self.state.mute_minutes else None,
                 reason,
             )
@@ -211,9 +215,10 @@ class FilterCog(
         # send notification to channel
         if self.state.report_channel:
             embed = disnake.Embed(
-                color=0x992E22, description=author.mention, timestamp=utils.utcnow()
+                color=0x992E22, description=context.author.mention, timestamp=utils.utcnow()
             ).set_author(
-                name=f"Muted {str(author)} ({author.id})", icon_url=author.display_avatar.url
+                name=f"Muted {str(context.author)} ({context.author.id})",
+                icon_url=context.author.display_avatar.url,
             )
 
             embed.add_field(
