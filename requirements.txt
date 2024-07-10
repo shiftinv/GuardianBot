@@ -1,4 +1,4 @@
-disnake @ git+https://github.com/DisnakeDev/disnake@cc5db415a8d1988b482acc4e8808489333f727b0
+disnake @ git+https://github.com/shiftinv/disnake@b2df032552a4f1373cbf02b101676febe2d02150
 humanize~=4.8.0
 aiodns~=3.1
 pydantic~=1.10.13

@@ -145,6 +145,14 @@ class FilterCog(
                 await self._handle_blocked(message, result.reason, result.messages or [message])
                 break
 
+        # recurse for message snapshots, which are implemented to be basically the same as
+        # the current message (in terms of id/author), but with updated content/embeds/...
+        for snapshot_data in message._message_snapshots:
+            snapshot = disnake.Message(
+                state=self._bot._connection, channel=message.channel, data=snapshot_data
+            )
+            await self.on_message(snapshot)
+
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
         if not message.guild:
             return False, "DM"
