@@ -32,9 +32,9 @@ class CheckContext:
         for embed in msg.embeds:
             embed_contents = [embed.title or "", embed.description or ""]
             embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
-            strings.append("\n".join(embed_contents))
+            strings.extend(embed_contents)
 
-        return cls(msg, "\n".join(strings), cls.get_author(msg))
+        return cls(msg, "\n".join(s for s in strings if s), cls.get_author(msg))
 
     @staticmethod
     def get_author(msg: disnake.Message) -> disnake.Member:
