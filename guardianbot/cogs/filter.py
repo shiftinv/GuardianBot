@@ -41,6 +41,16 @@ from ._base import BaseCog, loop_error_handled
 
 logger = logging.getLogger(__name__)
 
+MESSAGE_TYPES = frozenset(
+    {
+        disnake.MessageType.default,
+        disnake.MessageType.reply,
+        disnake.MessageType.application_command,
+        disnake.MessageType.thread_starter_message,
+        disnake.MessageType.context_menu_command,
+    }
+)
+
 
 _TChecker = TypeVar("_TChecker", bound=BaseChecker)
 
@@ -160,10 +170,12 @@ class FilterCog(
             await self.on_message(snapshot)
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
+        if message.type not in MESSAGE_TYPES:
+            return False, f"system message type ({message.type!r})"
         if not message.guild:
             return False, "DM"
         if message.guild.id != Config.guild_id:
-            return False, f"Unknown guild ({message.guild.id})"
+            return False, f"unknown guild ({message.guild.id})"
 
         author = CheckContext.get_author(message)
         if author.bot:
