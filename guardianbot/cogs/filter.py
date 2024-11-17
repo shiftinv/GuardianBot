@@ -176,12 +176,12 @@ class FilterCog(
             return False, "DM"
         if message.guild.id != Config.guild_id:
             return False, f"unknown guild ({message.guild.id})"
+        if not message._interaction_user_id and message.webhook_id:
+            return False, "webhook"
 
         author = CheckContext.get_author(message)
         if author.bot:
             return False, "bot"
-        if not message._interaction_user_id and message.webhook_id:
-            return False, "webhook"
 
         ctx: types.Context = await self._bot.get_context(message)
         if ctx.invoked_with:
