@@ -23,9 +23,10 @@ AnyMessageList = Sequence[Union[disnake.Message, disnake.PartialMessage]]
 
 @dataclass(frozen=True)
 class CheckContext:
-    message: disnake.Message
     string: str
+    message: disnake.Message
     author: disnake.Member
+    is_forwarded: bool
 
     @classmethod
     def from_message(cls, msg: types.AnyMessage, *, parent: disnake.Message):
@@ -35,7 +36,12 @@ class CheckContext:
             embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
             strings.extend(embed_contents)
 
-        return cls(parent, "\n".join(s for s in strings if s), cls.get_author(parent))
+        return cls(
+            "\n".join(s for s in strings if s),
+            parent,
+            cls.get_author(parent),
+            msg != parent,
+        )
 
     @staticmethod
     def get_author(msg: disnake.Message) -> disnake.Member:

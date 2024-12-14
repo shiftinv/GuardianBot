@@ -200,7 +200,8 @@ class FilterCog(
         self, context: CheckContext, reason: str, to_delete: AnyMessageList
     ) -> None:
         logger.info(
-            f"blocking message(s) by {str(context.author)}/{context.author.id} ('{context.string}') - {reason}"
+            f"blocking {'forwarded ' if context.is_forwarded else ''}message(s) by "
+            f"{str(context.author)}/{context.author.id} ('{context.string}') - {reason}"
         )
 
         tasks: List[Awaitable[Any]] = []
