@@ -69,17 +69,17 @@ class BaseCog(Generic[_TState], commands.Cog, metaclass=multicmd._MultiCmdMeta):
 
     # checks
 
-    async def cog_check(self, ctx: types.Context) -> bool:  # type: ignore [override]
+    async def cog_check(self, ctx: types.Context) -> bool:
         return await self.cog_any_check(ctx)
 
-    async def cog_slash_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
-        return await self.cog_any_check(ctx)
+    async def cog_slash_command_check(self, inter: types.AppCI) -> bool:
+        return await self.cog_any_check(inter)
 
-    async def cog_user_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
-        return await self.cog_any_check(ctx)
+    async def cog_user_command_check(self, inter: types.AppCI) -> bool:
+        return await self.cog_any_check(inter)
 
-    async def cog_message_command_check(self, ctx: types.AppCI) -> bool:  # type: ignore [override]
-        return await self.cog_any_check(ctx)
+    async def cog_message_command_check(self, inter: types.AppCI) -> bool:
+        return await self.cog_any_check(inter)
 
     # override in subclasses
     async def cog_any_check(self, ctx: types.AnyContext) -> bool:

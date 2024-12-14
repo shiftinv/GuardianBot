@@ -140,14 +140,23 @@ class FilterCog(
         check, check_reason = await self._should_check(message)
         if not check:
             author = (
-                message._interaction_user_id
-                and self._bot.get_user(message._interaction_user_id)
+                message.interaction_metadata
+                and self._bot.get_user(message.interaction_metadata.user.id)
                 or message.author
             )
             logger.info(f"ignoring message {message.id} by {author} ({check_reason})")
             return
 
-        context = CheckContext.from_message(message)
+        blocked = await self.check_message(message, parent=message)
+
+        if not blocked:
+            # recurse for message snapshots, which are considered to be basically the same as
+            # the current message (in terms of id/author), but with different content/embeds/...
+            for snapshot in message.message_snapshots:
+                await self.check_message(snapshot, parent=message)
+
+    async def check_message(self, message: types.AnyMessage, *, parent: disnake.Message) -> bool:
+        context = CheckContext.from_message(message, parent=parent)
         for checker in self.checkers.values():
             if checker is self.allowlist:
                 continue
@@ -158,16 +167,9 @@ class FilterCog(
                 if result.host and result.host in self.allowlist:
                     logger.info(f"preventing block, host '{result.host}' is allowed explicitly")
                     continue
-                await self._handle_blocked(context, result.reason, result.messages or [message])
-                break
-
-        # recurse for message snapshots, which are implemented to be basically the same as
-        # the current message (in terms of id/author), but with updated content/embeds/...
-        for snapshot_data in message._message_snapshots:
-            snapshot = disnake.Message(
-                state=self._bot._connection, channel=message.channel, data=snapshot_data
-            )
-            await self.on_message(snapshot)
+                await self._handle_blocked(context, result.reason, result.messages or [parent])
+                return True
+        return False
 
     async def _should_check(self, message: disnake.Message) -> Tuple[bool, str]:
         if message.type not in MESSAGE_TYPES:
@@ -176,7 +178,7 @@ class FilterCog(
             return False, "DM"
         if message.guild.id != Config.guild_id:
             return False, f"unknown guild ({message.guild.id})"
-        if not message._interaction_user_id and message.webhook_id:
+        if not message.interaction_metadata and message.webhook_id:
             return False, "webhook"
 
         author = CheckContext.get_author(message)

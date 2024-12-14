@@ -70,6 +70,9 @@ async def edit_response(ctx: types.AnyContext, **kwargs: Any) -> None:
     if isinstance(ctx, disnake.AppCommandInter):
         await ctx.edit_original_message(**kwargs)
     else:
+        assert not isinstance(
+            ctx.channel, disnake.GroupChannel
+        )  # FIXME: GroupChannel doesn't have get_partial_message
         msg = ctx.channel.get_partial_message(getattr(ctx, "__response_message__"))
         await msg.edit(**kwargs)
 

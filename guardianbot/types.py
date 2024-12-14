@@ -15,3 +15,5 @@ AnyContext = Union[Context, AppCI]
 NoneCoro = Coroutine[Any, Any, None]
 HandlerType = Callable[..., NoneCoro]
 THandlerType = TypeVar("THandlerType", bound=HandlerType)
+
+AnyMessage = Union[disnake.Message, disnake.ForwardedMessage]

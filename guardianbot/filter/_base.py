@@ -7,6 +7,7 @@ from typing import Any, Collection, Iterator, List, Optional, Sequence, Union
 import aiohttp
 import disnake
 
+from .. import types
 from ..config import Config
 
 __all__ = [
@@ -27,21 +28,21 @@ class CheckContext:
     author: disnake.Member
 
     @classmethod
-    def from_message(cls, msg: disnake.Message):
+    def from_message(cls, msg: types.AnyMessage, *, parent: disnake.Message):
         strings: List[str] = [msg.content]
         for embed in msg.embeds:
             embed_contents = [embed.title or "", embed.description or ""]
             embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
             strings.extend(embed_contents)
 
-        return cls(msg, "\n".join(s for s in strings if s), cls.get_author(msg))
+        return cls(parent, "\n".join(s for s in strings if s), cls.get_author(parent))
 
     @staticmethod
     def get_author(msg: disnake.Message) -> disnake.Member:
         author = msg.author
-        if msg._interaction_user_id:
+        if msg.interaction_metadata:
             assert msg.guild  # this always exists here
-            author = msg.guild.get_member(msg._interaction_user_id)
+            author = msg.guild.get_member(msg.interaction_metadata.user.id)
         assert isinstance(author, disnake.Member)
         return author
 
