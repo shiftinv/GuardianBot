@@ -2,10 +2,11 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Collection, Iterator, List, Optional, Sequence, Union
+from typing import Any, Collection, Iterator, List, Optional, Sequence, Union, cast
 
 import aiohttp
 import disnake
+from disnake import ui
 
 from .. import types
 from ..config import Config
@@ -35,6 +36,12 @@ class CheckContext:
             embed_contents = [embed.title or "", embed.description or ""]
             embed_contents.extend(f"{field.name}: {field.value}" for field in embed.fields)
             strings.extend(embed_contents)
+        # FIXME(disnake): components_from_message doesn't accept ForwardedMessage
+        for component in ui.walk_components(
+            ui.components_from_message(cast("disnake.Message", msg))
+        ):
+            if isinstance(component, ui.TextDisplay):
+                strings.append(component.content)
 
         return cls(
             "\n".join(s for s in strings if s),
