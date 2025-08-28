@@ -229,24 +229,19 @@ class FilterCog(
 
         # send notification to channel
         if self.state.report_channel:
+            content_fmt = (
+                f"{context.author.mention}\n"
+                "```\n"
+                f"{disnake.utils.escape_markdown(context.string)}\n"
+                f"``` ([{context.message.id}]({context.message.jump_url}))"
+            )
             embed = disnake.Embed(
-                color=0x992E22, description=context.author.mention, timestamp=utils.utcnow()
+                color=0x992E22, description=content_fmt, timestamp=utils.utcnow()
             ).set_author(
                 name=f"Muted {str(context.author)} ({context.author.id})",
                 icon_url=context.author.display_avatar.url,
             )
 
-            embed.add_field(
-                name="Text",
-                value="\n".join(
-                    [
-                        "```",
-                        f"{disnake.utils.escape_markdown(context.string)}",
-                        f"``` ([{context.message.id}]({context.message.jump_url}))",
-                    ]
-                ),
-                inline=False,
-            )
             embed.add_field(
                 name="Channel",
                 value=cast(disnake.TextChannel, context.message.channel).mention,
