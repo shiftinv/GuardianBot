@@ -64,9 +64,6 @@ class SpamChecker(ManualBaseChecker):
                 )
 
                 # store partial message for deletion later
-                assert not isinstance(
-                    context.message.channel, disnake.GroupChannel
-                )  # FIXME: GroupChannel doesn't have get_partial_message
                 hist.append(context.message.channel.get_partial_message(context.message.id))
 
                 # drop older history entries
